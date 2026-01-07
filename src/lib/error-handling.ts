@@ -1,6 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { z } from 'zod'
-import { Prisma } from '@prisma/client'
 import { errorLogger, ErrorCategory, LogLevel } from '@/lib/error-logger'
 
 // Error types
