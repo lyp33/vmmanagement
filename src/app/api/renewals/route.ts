@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
         select: { projectId: true }
       });
 
-      const accessibleProjectIds = userProjectIds.map(assignment => assignment.projectId);
+      const accessibleProjectIds = userProjectIds.map((assignment: any) => assignment.projectId);
       vmsNeedingRenewal = vmsNeedingRenewal.filter(vm => 
         accessibleProjectIds.includes(vm.projectId)
       );
