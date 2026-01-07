@@ -10,7 +10,7 @@ export async function GET() {
       { name: 'Audit', url: '/api/audit-simple' }
     ]
 
-    const results = []
+    const results: any[] = []
     
     for (const api of apis) {
       try {
