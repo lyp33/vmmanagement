@@ -1,5 +1,8 @@
 import { prisma } from '@/lib/prisma'
 
+// Define UserRole type since we don't use Prisma
+type UserRole = 'ADMIN' | 'USER'
+
 export interface ExportOptions {
   format: 'json' | 'csv'
   includeDeleted?: boolean
