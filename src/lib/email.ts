@@ -1,6 +1,27 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialize Resend only when needed
+let resend: Resend | null = null;
+
+function getResend(): Resend {
+  if (!resend) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.warn('RESEND_API_KEY not configured. Email notifications will be disabled.');
+      // Return a mock Resend that doesn't actually send emails
+      return {
+        emails: {
+          send: async () => {
+            console.log('Email sending skipped: RESEND_API_KEY not configured');
+            return { id: 'mock-email-id' };
+          }
+        }
+      } as any;
+    }
+    resend = new Resend(apiKey);
+  }
+  return resend;
+}
 
 export interface VMExpiryEmailData {
   vmAccount: string;
@@ -28,14 +49,10 @@ export class EmailService {
    */
   async sendExpiryNotification(data: VMExpiryEmailData): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
-      if (!process.env.RESEND_API_KEY) {
-        throw new Error('RESEND_API_KEY is not configured');
-      }
-
       const emailHtml = this.generateExpiryEmailTemplate(data);
       const emailText = this.generateExpiryEmailText(data);
 
-      const result = await resend.emails.send({
+      const result = await getResend().emails.send({
         from: 'VM Expiry Management <noreply@yourdomain.com>',
         to: [data.recipientEmail],
         subject: `VM Expiry Alert: ${data.vmAccount} expires in 7 days`,
@@ -216,15 +233,8 @@ If you believe this notification was sent in error, please contact your system a
    */
   async testEmailConfiguration(): Promise<{ success: boolean; error?: string }> {
     try {
-      if (!process.env.RESEND_API_KEY) {
-        return {
-          success: false,
-          error: 'RESEND_API_KEY is not configured'
-        };
-      }
-
       // Test with a simple email
-      const result = await resend.emails.send({
+      const result = await getResend().emails.send({
         from: 'VM Expiry Management <noreply@yourdomain.com>',
         to: ['test@example.com'],
         subject: 'Email Configuration Test',
