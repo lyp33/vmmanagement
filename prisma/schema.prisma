@@ -108,6 +108,20 @@ model NotificationLog {
   @@map("notification_logs")
 }
 
+model BatchNotificationLog {
+  id             String             @id @default(cuid())
+  recipientEmail String
+  projectId      String             // "ALL_PROJECTS" for admin notifications
+  status         NotificationStatus @default(PENDING)
+  vmCount        Int                @default(0)
+  sentAt         DateTime?
+  errorMessage   String?
+  retryCount     Int                @default(0)
+  createdAt      DateTime           @default(now())
+
+  @@map("batch_notification_logs")
+}
+
 enum UserRole {
   ADMIN
   USER

@@ -1,13 +1,14 @@
-import { prisma } from './prisma';
-import { emailService, VMExpiryEmailData } from './email';
+import { kvStorage } from './kv-storage';
+import { emailService, VMExpiryEmailData, BatchExpiryEmailData, ProjectVMGroup, VMSummary } from './email';
 import { AuditService } from './audit';
 
 export interface NotificationResult {
   success: boolean;
-  vmId: string;
+  vmId?: string;
   recipientEmail: string;
   error?: string;
   messageId?: string;
+  vmCount?: number;
 }
 
 export interface ExpiryCheckResult {
@@ -16,6 +17,8 @@ export interface ExpiryCheckResult {
   notificationsSent: number;
   notificationsFailed: number;
   errors: string[];
+  userNotifications: number;
+  adminNotifications: number;
 }
 
 export class NotificationService {
@@ -35,6 +38,9 @@ export class NotificationService {
 
   /**
    * Check for VMs expiring in 7 days and send notifications
+   * Groups VMs by project and sends:
+   * - Project-specific emails to project users
+   * - Complete list to all admins
    */
   async checkExpiringVMs(): Promise<ExpiryCheckResult> {
     const result: ExpiryCheckResult = {
@@ -42,7 +48,9 @@ export class NotificationService {
       expiringVMs: 0,
       notificationsSent: 0,
       notificationsFailed: 0,
-      errors: []
+      errors: [],
+      userNotifications: 0,
+      adminNotifications: 0
     };
 
     try {
@@ -58,49 +66,111 @@ export class NotificationService {
       const endOfTargetDay = new Date(targetDate);
       endOfTargetDay.setHours(23, 59, 59, 999);
 
-      // Get all VMs
-      const totalVMs = await prisma.vMRecord.count();
-      result.totalVMs = totalVMs;
+      // Get all VMs from KV storage
+      const allVMs = await kvStorage.findAllVMs();
+      result.totalVMs = allVMs.length;
 
       // Find VMs expiring exactly 7 days from now
-      const expiringVMs = await prisma.vMRecord.findMany({
-        where: {
-          currentExpiryDate: {
-            gte: startOfTargetDay,
-            lte: endOfTargetDay
-          }
-        },
-        include: {
-          project: true
-        }
+      const expiringVMs = allVMs.filter(vm => {
+        const expiryDate = new Date(vm.currentExpiryDate);
+        return expiryDate >= startOfTargetDay && expiryDate <= endOfTargetDay;
       });
 
       result.expiringVMs = expiringVMs.length;
 
-      // Process each expiring VM
-      for (const vm of expiringVMs) {
-        try {
-          // Check if notification was already sent today
-          const existingNotification = await this.checkExistingNotification(vm.id);
-          if (existingNotification) {
-            continue; // Skip if already notified today
+      if (expiringVMs.length === 0) {
+        console.log('No VMs expiring in 7 days');
+        return result;
+      }
+
+      // Enrich VMs with project and user data
+      const enrichedVMs = await Promise.all(
+        expiringVMs.map(async (vm) => {
+          const project = await kvStorage.findProjectById(vm.projectId);
+          const projectUsers = await this.getProjectUsers(vm.projectId);
+          
+          return {
+            ...vm,
+            project: project || { id: vm.projectId, name: 'Unknown Project' },
+            users: projectUsers
+          };
+        })
+      );
+
+      // Group VMs by project
+      const projectGroups = this.groupVMsByProject(enrichedVMs);
+
+      // Get all admin users
+      const allUsers = await kvStorage.findAllUsers();
+      const adminUsers = allUsers.filter(u => u.role === 'ADMIN');
+
+      // Send notifications to project users
+      const projectUserEmails = new Set<string>();
+      
+      for (const [projectId, projectData] of Object.entries(projectGroups)) {
+        const projectUsers = projectData.users;
+        
+        for (const user of projectUsers) {
+          // Skip if already notified today
+          const alreadyNotified = await this.checkBatchNotificationSent(user.email, projectId);
+          if (alreadyNotified) {
+            continue;
           }
 
-          // Send notification
-          const notificationResult = await this.sendExpiryNotification(vm);
-          
+          projectUserEmails.add(user.email);
+
+          // Send project-specific notification
+          const notificationResult = await this.sendBatchNotification({
+            recipientEmail: user.email,
+            recipientName: user.name,
+            isAdmin: false,
+            projectGroups: [{
+              projectName: projectData.projectName,
+              vms: projectData.vms
+            }]
+          });
+
           if (notificationResult.success) {
             result.notificationsSent++;
+            result.userNotifications++;
+            await this.logBatchNotification(user.email, projectId, 'SENT', notificationResult.messageId, projectData.vms.length);
           } else {
             result.notificationsFailed++;
-            if (notificationResult.error) {
-              result.errors.push(`VM ${vm.vmAccount}: ${notificationResult.error}`);
-            }
+            result.errors.push(`User ${user.email} (Project ${projectData.projectName}): ${notificationResult.error}`);
+            await this.logBatchNotification(user.email, projectId, 'FAILED', undefined, projectData.vms.length, notificationResult.error);
           }
-        } catch (error) {
+        }
+      }
+
+      // Send complete list to all admins
+      const allProjectGroups: ProjectVMGroup[] = Object.values(projectGroups).map(pg => ({
+        projectName: pg.projectName,
+        vms: pg.vms
+      }));
+
+      for (const admin of adminUsers) {
+        // Skip if already notified today
+        const alreadyNotified = await this.checkBatchNotificationSent(admin.email, 'ALL_PROJECTS');
+        if (alreadyNotified) {
+          continue;
+        }
+
+        // Send admin notification with all projects
+        const notificationResult = await this.sendBatchNotification({
+          recipientEmail: admin.email,
+          recipientName: admin.name,
+          isAdmin: true,
+          projectGroups: allProjectGroups
+        });
+
+        if (notificationResult.success) {
+          result.notificationsSent++;
+          result.adminNotifications++;
+          await this.logBatchNotification(admin.email, 'ALL_PROJECTS', 'SENT', notificationResult.messageId, expiringVMs.length);
+        } else {
           result.notificationsFailed++;
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          result.errors.push(`VM ${vm.vmAccount}: ${errorMessage}`);
+          result.errors.push(`Admin ${admin.email}: ${notificationResult.error}`);
+          await this.logBatchNotification(admin.email, 'ALL_PROJECTS', 'FAILED', undefined, expiringVMs.length, notificationResult.error);
         }
       }
 
@@ -114,6 +184,8 @@ export class NotificationService {
           expiringVMs: result.expiringVMs,
           notificationsSent: result.notificationsSent,
           notificationsFailed: result.notificationsFailed,
+          userNotifications: result.userNotifications,
+          adminNotifications: result.adminNotifications,
           targetDate: targetDate.toISOString()
         }
       }, 'system', 'system@vm-expiry-management');
@@ -124,6 +196,167 @@ export class NotificationService {
     }
 
     return result;
+  }
+
+  /**
+   * Get users assigned to a project
+   */
+  private async getProjectUsers(projectId: string): Promise<any[]> {
+    const allUsers = await kvStorage.findAllUsers();
+    const projectUsers: any[] = [];
+    
+    for (const user of allUsers) {
+      const userProjects = await kvStorage.findUserProjects(user.id);
+      if (userProjects.some(p => p.id === projectId)) {
+        projectUsers.push(user);
+      }
+    }
+    
+    return projectUsers;
+  }
+
+  /**
+   * Group VMs by project
+   */
+  private groupVMsByProject(vms: any[]): Record<string, { projectName: string; vms: VMSummary[]; users: any[] }> {
+    const groups: Record<string, { projectName: string; vms: VMSummary[]; users: any[] }> = {};
+
+    for (const vm of vms) {
+      if (!groups[vm.projectId]) {
+        groups[vm.projectId] = {
+          projectName: vm.project.name,
+          vms: [],
+          users: vm.users || []
+        };
+      }
+
+      groups[vm.projectId].vms.push({
+        vmAccount: vm.vmAccount,
+        vmDomain: vm.vmDomain,
+        vmInternalIP: vm.vmInternalIP,
+        currentExpiryDate: new Date(vm.currentExpiryDate),
+        email: vm.email
+      });
+    }
+
+    return groups;
+  }
+
+  /**
+   * Send batch notification email
+   */
+  private async sendBatchNotification(data: BatchExpiryEmailData): Promise<NotificationResult> {
+    const result: NotificationResult = {
+      success: false,
+      recipientEmail: data.recipientEmail,
+      vmCount: data.projectGroups.reduce((sum, pg) => sum + pg.vms.length, 0)
+    };
+
+    try {
+      const emailResult = await this.sendEmailWithRetryBatch(data);
+      
+      if (emailResult.success) {
+        result.success = true;
+        result.messageId = emailResult.messageId;
+      } else {
+        result.error = emailResult.error;
+      }
+    } catch (error) {
+      result.error = error instanceof Error ? error.message : 'Unknown error';
+    }
+
+    return result;
+  }
+
+  /**
+   * Send batch email with retry mechanism
+   */
+  private async sendEmailWithRetryBatch(emailData: BatchExpiryEmailData, retryCount = 0): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      const result = await emailService.sendBatchExpiryNotification(emailData);
+      
+      if (!result.success && retryCount < this.MAX_RETRY_COUNT) {
+        await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY_MS));
+        return this.sendEmailWithRetryBatch(emailData, retryCount + 1);
+      }
+      
+      return result;
+    } catch (error) {
+      if (retryCount < this.MAX_RETRY_COUNT) {
+        await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY_MS));
+        return this.sendEmailWithRetryBatch(emailData, retryCount + 1);
+      }
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Log batch notification to KV storage
+   */
+  private async logBatchNotification(
+    recipientEmail: string,
+    projectId: string,
+    status: 'PENDING' | 'SENT' | 'FAILED',
+    messageId?: string,
+    vmCount?: number,
+    errorMessage?: string
+  ): Promise<void> {
+    try {
+      const { kv } = await import('@vercel/kv');
+      const { createId } = await import('@paralleldrive/cuid2');
+      
+      const log = {
+        id: createId(),
+        recipientEmail,
+        projectId,
+        status,
+        vmCount: vmCount || 0,
+        sentAt: status === 'SENT' ? new Date().toISOString() : null,
+        messageId,
+        errorMessage,
+        retryCount: 0,
+        createdAt: new Date().toISOString()
+      };
+
+      await kv.lpush('batch_notification_logs', JSON.stringify(log));
+      
+      // Keep only last 5000 logs
+      await kv.ltrim('batch_notification_logs', 0, 4999);
+      
+      // Also store by recipient and date for quick lookup
+      const dateKey = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const lookupKey = `batch_notif:${recipientEmail}:${projectId}:${dateKey}`;
+      await kv.set(lookupKey, log, { ex: 86400 * 7 }); // Expire after 7 days
+    } catch (error) {
+      console.error('Failed to log batch notification:', error);
+    }
+  }
+
+  /**
+   * Check if batch notification was already sent today
+   */
+  private async checkBatchNotificationSent(recipientEmail: string, projectId: string): Promise<boolean> {
+    try {
+      const { kv } = await import('@vercel/kv');
+      const dateKey = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const lookupKey = `batch_notif:${recipientEmail}:${projectId}:${dateKey}`;
+      
+      const existingLog = await kv.get(lookupKey);
+      
+      if (existingLog && typeof existingLog === 'object') {
+        const log = existingLog as any;
+        return log.status === 'SENT';
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Failed to check batch notification:', error);
+      return false;
+    }
   }
 
   /**
@@ -225,7 +458,7 @@ export class NotificationService {
   }
 
   /**
-   * Log notification status to database
+   * Log notification status to KV storage
    */
   private async logNotification(
     vmId: string, 
@@ -235,15 +468,13 @@ export class NotificationService {
     errorMessage?: string
   ): Promise<void> {
     try {
-      await prisma.notificationLog.create({
-        data: {
-          vmId,
-          recipientEmail,
-          status,
-          sentAt: status === 'SENT' ? new Date() : null,
-          errorMessage,
-          retryCount: 0
-        }
+      await kvStorage.createNotificationLog({
+        vmId,
+        recipientEmail,
+        status,
+        sentAt: status === 'SENT' ? new Date().toISOString() : undefined,
+        errorMessage,
+        retryCount: 0
       });
     } catch (error) {
       // Log error but don't throw - notification logging shouldn't break the main flow
@@ -256,24 +487,18 @@ export class NotificationService {
    */
   private async checkExistingNotification(vmId: string): Promise<boolean> {
     try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const { kv } = await import('@vercel/kv');
+      const dateKey = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const lookupKey = `notif:${vmId}:${dateKey}`;
       
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const existingNotification = await prisma.notificationLog.findFirst({
-        where: {
-          vmId,
-          status: 'SENT',
-          sentAt: {
-            gte: today,
-            lt: tomorrow
-          }
-        }
-      });
-
-      return !!existingNotification;
+      const existingLog = await kv.get(lookupKey);
+      
+      if (existingLog && typeof existingLog === 'object') {
+        const log = existingLog as any;
+        return log.status === 'SENT';
+      }
+      
+      return false;
     } catch (error) {
       // If we can't check, assume no notification was sent to be safe
       return false;
@@ -291,66 +516,45 @@ export class NotificationService {
     };
 
     try {
-      // Get failed notifications from the last 24 hours that haven't exceeded retry limit
+      // Get failed notifications from KV storage
+      const logs = await kvStorage.findNotificationLogs(1000);
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
 
-      const failedNotifications = await prisma.notificationLog.findMany({
-        where: {
-          status: 'FAILED',
-          retryCount: {
-            lt: this.MAX_RETRY_COUNT
-          },
-          createdAt: {
-            gte: yesterday
-          }
-        },
-        include: {
-          vm: {
-            include: {
-              project: true
-            }
-          }
-        }
-      });
+      const failedNotifications = logs.filter(log => 
+        log.status === 'FAILED' &&
+        log.retryCount < this.MAX_RETRY_COUNT &&
+        new Date(log.createdAt) >= yesterday
+      );
 
       for (const notification of failedNotifications) {
         result.retriedCount++;
         
         try {
+          // Get VM details
+          const vm = await kvStorage.findVMById(notification.vmId);
+          if (!vm) {
+            result.errors.push(`VM ${notification.vmId} not found`);
+            continue;
+          }
+
+          // Get project details
+          const project = await kvStorage.findProjectById(vm.projectId);
+          
           // Retry sending the notification
-          const retryResult = await this.sendExpiryNotification(notification.vm);
+          const retryResult = await this.sendExpiryNotification({
+            ...vm,
+            project: project || { name: 'Unknown Project' }
+          });
           
           if (retryResult.success) {
             result.successCount++;
-            
-            // Update the notification log
-            await prisma.notificationLog.update({
-              where: { id: notification.id },
-              data: {
-                status: 'SENT',
-                sentAt: new Date(),
-                retryCount: notification.retryCount + 1,
-                errorMessage: null
-              }
-            });
-          } else {
-            // Update retry count
-            await prisma.notificationLog.update({
-              where: { id: notification.id },
-              data: {
-                retryCount: notification.retryCount + 1,
-                errorMessage: retryResult.error
-              }
-            });
-            
-            if (retryResult.error) {
-              result.errors.push(`VM ${notification.vm.vmAccount}: ${retryResult.error}`);
-            }
+          } else if (retryResult.error) {
+            result.errors.push(`VM ${vm.vmAccount}: ${retryResult.error}`);
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          result.errors.push(`VM ${notification.vm.vmAccount}: ${errorMessage}`);
+          result.errors.push(`VM ${notification.vmId}: ${errorMessage}`);
         }
       }
     } catch (error) {
@@ -370,45 +574,30 @@ export class NotificationService {
     failedNotifications: number;
     pendingNotifications: number;
   }> {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    try {
+      const logs = await kvStorage.findNotificationLogs(10000);
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
 
-    const stats = await prisma.notificationLog.groupBy({
-      by: ['status'],
-      where: {
-        createdAt: {
-          gte: startDate
-        }
-      },
-      _count: {
-        status: true
-      }
-    });
+      const recentLogs = logs.filter(log => new Date(log.createdAt) >= startDate);
 
-    const result = {
-      totalNotifications: 0,
-      sentNotifications: 0,
-      failedNotifications: 0,
-      pendingNotifications: 0
-    };
+      const result = {
+        totalNotifications: recentLogs.length,
+        sentNotifications: recentLogs.filter(l => l.status === 'SENT').length,
+        failedNotifications: recentLogs.filter(l => l.status === 'FAILED').length,
+        pendingNotifications: recentLogs.filter(l => l.status === 'PENDING').length
+      };
 
-    stats.forEach(stat => {
-      result.totalNotifications += stat._count.status;
-      
-      switch (stat.status) {
-        case 'SENT':
-          result.sentNotifications = stat._count.status;
-          break;
-        case 'FAILED':
-          result.failedNotifications = stat._count.status;
-          break;
-        case 'PENDING':
-          result.pendingNotifications = stat._count.status;
-          break;
-      }
-    });
-
-    return result;
+      return result;
+    } catch (error) {
+      console.error('Failed to get notification stats:', error);
+      return {
+        totalNotifications: 0,
+        sentNotifications: 0,
+        failedNotifications: 0,
+        pendingNotifications: 0
+      };
+    }
   }
 }
 

@@ -141,10 +141,12 @@ export function Navigation() {
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
@@ -226,16 +228,18 @@ export function Navigation() {
                 >
                   Profile
                 </Button>
-                <Button
-                  variant="ghost"
-                  className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-                  onClick={() => {
-                    router.push('/dashboard/settings')
-                    setIsMobileMenuOpen(false)
-                  }}
-                >
-                  Settings
-                </Button>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                    onClick={() => {
+                      router.push('/dashboard/settings')
+                      setIsMobileMenuOpen(false)
+                    }}
+                  >
+                    Settings
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
