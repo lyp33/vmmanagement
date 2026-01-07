@@ -350,8 +350,6 @@ export function ErrorDashboard({
             <CardTitle>Recent Errors</CardTitle>
             <CardDescription>Latest error records</CardDescription>
           </CardHeader>
-            <CardDescription>最新ofErrorrecords</CardDescription>
-          </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-64 overflow-y-auto">
               {stats.recentErrors.map((error) => (
