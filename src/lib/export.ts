@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma'
-import { UserRole } from '@prisma/client'
 
 export interface ExportOptions {
   format: 'json' | 'csv'
