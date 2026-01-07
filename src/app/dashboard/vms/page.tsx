@@ -62,6 +62,9 @@ export default function VMsPage() {
     expiryStatus: 'all'
   })
   const [error, setError] = useState('')
+  const [showBatchRenewDialog, setShowBatchRenewDialog] = useState(false)
+  const [renewalMonths, setRenewalMonths] = useState(3)
+  const [batchRenewing, setBatchRenewing] = useState(false)
 
   const isAdmin = session?.user?.role === 'ADMIN'
 
@@ -160,21 +163,40 @@ export default function VMsPage() {
   const handleBatchRenewal = async () => {
     if (selectedVMs.length === 0) return
 
+    setBatchRenewing(true)
+    setError('')
+
     try {
       const response = await fetch('/api/vms/batch-renew', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vmIds: selectedVMs })
+        body: JSON.stringify({ 
+          vmIds: selectedVMs,
+          renewalPeriodMonths: renewalMonths
+        })
       })
 
-      if (!response.ok) throw new Error('Batch renewal failed')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Batch renewal failed')
+      }
+      
+      const result = await response.json()
+      
+      // Show success message
+      if (result.results.successful > 0) {
+        setError(`Successfully renewed ${result.results.successful} VM(s)${result.results.failed > 0 ? `, ${result.results.failed} failed` : ''}`)
+      }
       
       await fetchVMs()
       setSelectedVMs([])
-      setError('')
+      setShowBatchRenewDialog(false)
+      setRenewalMonths(3) // Reset to default
     } catch (error) {
       console.error('Batch renewal error:', error)
-      setError('Batch RenewFailed')
+      setError(error instanceof Error ? error.message : 'Batch renewal failed')
+    } finally {
+      setBatchRenewing(false)
     }
   }
 
@@ -360,10 +382,10 @@ export default function VMsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">
-                  Selected {selectedVMs.length} VMs
+                  Selected {selectedVMs.length} VM(s)
                 </span>
                 <div className="space-x-2">
-                  <Button onClick={handleBatchRenewal}>
+                  <Button onClick={() => setShowBatchRenewDialog(true)}>
                     <Calendar className="w-4 h-4 mr-2" />
                     Batch Renew
                   </Button>
@@ -375,6 +397,74 @@ export default function VMsPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Batch Renewal Dialog */}
+        <Dialog open={showBatchRenewDialog} onOpenChange={setShowBatchRenewDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Batch Renew VMs</DialogTitle>
+              <DialogDescription>
+                Renew {selectedVMs.length} selected VM(s) by extending their expiry dates
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="renewalMonths">Renewal Period (Months)</Label>
+                <Select
+                  value={renewalMonths.toString()}
+                  onValueChange={(value) => setRenewalMonths(parseInt(value))}
+                  disabled={batchRenewing}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 Month</SelectItem>
+                    <SelectItem value="2">2 Months</SelectItem>
+                    <SelectItem value="3">3 Months (Default)</SelectItem>
+                    <SelectItem value="6">6 Months</SelectItem>
+                    <SelectItem value="12">12 Months</SelectItem>
+                    <SelectItem value="24">24 Months</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-gray-500">
+                  The expiry date will be extended by {renewalMonths} month(s) from the current expiry date
+                </p>
+              </div>
+
+              <Alert>
+                <AlertDescription>
+                  <strong>Selected VMs:</strong> {selectedVMs.length} VM(s) will be renewed
+                </AlertDescription>
+              </Alert>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowBatchRenewDialog(false)}
+                disabled={batchRenewing}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBatchRenewal}
+                disabled={batchRenewing}
+              >
+                {batchRenewing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Renewing...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Confirm Renewal
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* VM List */}
         <Card>
