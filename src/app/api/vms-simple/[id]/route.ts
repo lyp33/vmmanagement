@@ -38,7 +38,7 @@ export async function PUT(
     const { email, vmAccount, vmInternalIP, vmDomain, projectId, currentExpiryDate } = body
 
     // Find project if projectId is provided
-    let projectInfo = undefined
+    let projectInfo: any = undefined
     if (projectId) {
       const project = mockData.getProjectById(projectId)
       if (!project) {
