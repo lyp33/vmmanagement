@@ -1,34 +1,42 @@
-# ✅ Vercel 部署问题已修复
+# ✅ Vercel 部署问题已修复（更新）
 
-## 问题描述
+## 问题 1：Prisma 迁移错误
 
-部署到 Vercel 时出现错误：
+**错误信息：**
 ```
 Error: The datasource.url property is required in your Prisma config file when using prisma migrate deploy.
-Error: Command "npm run vercel-build" exited with 1
 ```
 
-## 原因
+**解决方案：** ✅ 已修复
+- 移除了 `vercel-build` 脚本中的 Prisma 迁移命令
+- 修改为：`"vercel-build": "next build"`
 
-`vercel-build` 脚本包含了 Prisma 数据库迁移命令，但我们的应用使用的是：
-- **本地开发**：文件存储
-- **Vercel 生产**：Vercel KV (Redis)
+## 问题 2：TypeScript 编译错误
 
-不需要 Prisma 数据库迁移。
-
-## 解决方案
-
-已修改 `package.json` 中的构建脚本：
-
-**修改前：**
-```json
-"vercel-build": "prisma generate && prisma migrate deploy && next build"
+**错误信息：**
+```
+Failed to compile.
+../prisma/seed.ts:1:10
+Type error: Module '"@prisma/client"' has no exported member 'PrismaClient'.
 ```
 
-**修改后：**
-```json
-"vercel-build": "next build"
-```
+**原因：** TypeScript 尝试编译 `prisma/seed.ts`，但我们不使用 Prisma 数据库。
+
+**解决方案：** ✅ 已修复
+- 在 `tsconfig.json` 中排除了 Prisma 相关文件
+- 添加了以下排除项：
+  ```json
+  "exclude": [
+    "node_modules",
+    "prisma",
+    "scripts",
+    "*.js"
+  ]
+  ```
+
+## 所有修复已推送到 GitHub
+
+代码已经更新并推送，Vercel 会自动重新部署。
 
 ## 现在可以部署了！
 

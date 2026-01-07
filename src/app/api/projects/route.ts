@@ -50,7 +50,7 @@ export const GET = asyncHandler(async (request: NextRequest) => {
         }
       }
     })
-    projects = userAssignments.map(assignment => assignment.project)
+    projects = userAssignments.map((assignment: any) => assignment.project)
   }
 
   return NextResponse.json(projects)
