@@ -37,7 +37,7 @@ async function checkBatchVMAccess(vmIds: string[], userId: string, isAdmin: bool
     select: { projectId: true }
   });
 
-  const accessibleProjectIds = userProjectIds.map(assignment => assignment.projectId);
+  const accessibleProjectIds = userProjectIds.map((assignment: any) => assignment.projectId);
   const inaccessibleVMs = vms.filter(vm => !accessibleProjectIds.includes(vm.projectId));
 
   if (inaccessibleVMs.length > 0) {
@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
         select: { projectId: true }
       });
 
-      const accessibleProjectIds = userProjectIds.map(assignment => assignment.projectId);
+      const accessibleProjectIds = userProjectIds.map((assignment: any) => assignment.projectId);
       vmsNeedingRenewal = vmsNeedingRenewal.filter(vm => 
         accessibleProjectIds.includes(vm.projectId)
       );

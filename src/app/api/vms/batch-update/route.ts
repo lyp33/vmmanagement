@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         where: { userId: user.id },
         select: { projectId: true }
       })
-      const userProjectIds = userProjects.map(p => p.projectId)
+      const userProjectIds = userProjects.map((p: any) => p.projectId)
 
       const unauthorizedVMs = vmsToUpdate.filter(vm => !userProjectIds.includes(vm.projectId))
       if (unauthorizedVMs.length > 0) {

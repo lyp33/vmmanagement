@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         where: { userId: user.id },
         select: { projectId: true }
       })
-      accessibleProjectIds = userProjects.map(p => p.projectId)
+      accessibleProjectIds = userProjects.map((p: any) => p.projectId)
     }
 
     // 搜索VM记录
