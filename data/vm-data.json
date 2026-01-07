@@ -1,0 +1,27 @@
+{
+  "users": [
+    {
+      "id": "xippg3be7evgp9jlcijqkaxl",
+      "email": "admin@123.com",
+      "name": "Administrator",
+      "password": "$2b$10$iSMVy6VjBuIalymehkXo8.9553JPAskoyNGD9gAQWqpOHLiANUxwq",
+      "role": "ADMIN",
+      "createdAt": "2026-01-07T15:12:55.424Z",
+      "updatedAt": "2026-01-07T15:12:55.424Z"
+    },
+    {
+      "id": "dcacyqbrzbmtxf4k2722d3g0",
+      "email": "testuser@test.com",
+      "name": "Test User",
+      "password": "$2b$10$cVFWkg/0leyzzLKz7lJmtuHcMvV5YeDqCbPXAJQAJ7RiL2vLdlx4C",
+      "role": "USER",
+      "createdAt": "2026-01-07T15:22:26.940Z",
+      "updatedAt": "2026-01-07T15:22:26.940Z"
+    }
+  ],
+  "projects": [],
+  "projectAssignments": [],
+  "vmRecords": [],
+  "auditLogs": [],
+  "notificationLogs": []
+}
