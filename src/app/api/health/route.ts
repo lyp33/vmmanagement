@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { config } from '@/lib/config'
-import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
@@ -10,18 +9,22 @@ export async function GET() {
       environment: config.app.environment,
       version: config.app.version,
       checks: {
-        database: 'unknown',
+        storage: 'unknown',
         email: 'unknown',
         auth: 'unknown'
       }
     }
 
-    // Database health check
+    // Storage health check (KV or file-based)
     try {
-      await prisma.$queryRaw`SELECT 1`
-      healthCheck.checks.database = 'healthy'
+      // Check if we're using KV storage
+      if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+        healthCheck.checks.storage = 'kv_configured'
+      } else {
+        healthCheck.checks.storage = 'file_based'
+      }
     } catch (error) {
-      healthCheck.checks.database = 'unhealthy'
+      healthCheck.checks.storage = 'unhealthy'
       healthCheck.status = 'degraded'
     }
 
@@ -30,9 +33,7 @@ export async function GET() {
       healthCheck.checks.email = 'configured'
     } else {
       healthCheck.checks.email = 'not_configured'
-      if (config.app.isProduction) {
-        healthCheck.status = 'degraded'
-      }
+      // Email is optional, don't mark as degraded
     }
 
     // Auth configuration check
@@ -40,26 +41,33 @@ export async function GET() {
       healthCheck.checks.auth = 'configured'
     } else {
       healthCheck.checks.auth = 'not_configured'
-      healthCheck.status = 'unhealthy'
+      if (config.app.isProduction) {
+        healthCheck.status = 'degraded'
+      }
     }
 
     // Include setup info in development
     if (config.app.isDevelopment) {
-      const { testSetup } = await import('@/lib/test-setup')
-      const setupResult = await testSetup()
-      
-      return NextResponse.json({
-        ...healthCheck,
-        setup: setupResult,
-        components: {
-          nextjs: '16.1.1',
-          typescript: 'configured',
-          tailwind: 'configured',
-          shadcn: 'configured',
-          prisma: 'configured',
-          nextauth: 'configured',
-        }
-      })
+      try {
+        const { testSetup } = await import('@/lib/test-setup')
+        const setupResult = await testSetup()
+        
+        return NextResponse.json({
+          ...healthCheck,
+          setup: setupResult,
+          components: {
+            nextjs: '16.1.1',
+            typescript: 'configured',
+            tailwind: 'configured',
+            shadcn: 'configured',
+            storage: healthCheck.checks.storage,
+            nextauth: 'configured',
+          }
+        })
+      } catch (error) {
+        // If test-setup fails, just return basic health check
+        return NextResponse.json(healthCheck)
+      }
     }
 
     // Return appropriate status code

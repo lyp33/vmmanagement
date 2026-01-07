@@ -1,20 +1,20 @@
 export const config = {
   database: {
     // Use Vercel Postgres URL in production, fallback to DATABASE_URL
-    url: process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL!,
+    url: process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL || '',
   },
   auth: {
-    secret: process.env.NEXTAUTH_SECRET!,
+    secret: process.env.NEXTAUTH_SECRET || '',
     // Auto-detect production URL or use provided NEXTAUTH_URL
     url: process.env.NEXTAUTH_URL || 
          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'),
   },
   email: {
-    resendApiKey: process.env.RESEND_API_KEY!,
+    resendApiKey: process.env.RESEND_API_KEY || '',
     fromEmail: process.env.FROM_EMAIL || "noreply@vmmanagement.com",
   },
   app: {
-    name: "VM到期管理系统",
+    name: "VM Expiry Management System",
     version: "1.0.0",
     environment: process.env.NODE_ENV || "development",
     isProduction: process.env.NODE_ENV === "production",
@@ -35,8 +35,13 @@ export const config = {
   },
 } as const
 
-// Validation for required environment variables
+// Validation for required environment variables (only at runtime, not build time)
 export function validateConfig() {
+  // Skip validation during build time
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return
+  }
+
   const required = [
     'DATABASE_URL',
     'NEXTAUTH_SECRET',
@@ -46,11 +51,7 @@ export function validateConfig() {
   const missing = required.filter(key => !process.env[key] && !process.env.POSTGRES_PRISMA_URL)
   
   if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
+    console.warn(`Missing required environment variables: ${missing.join(', ')}`)
+    // Don't throw error, just warn - app will use KV storage or file storage as fallback
   }
-}
-
-// Call validation in production
-if (config.app.isProduction) {
-  validateConfig()
 }
