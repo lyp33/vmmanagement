@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     // 使用事务进行批量更新，确保原子性
     const result = await prisma.$transaction(async (tx) => {
-      const updatedVMs = []
+      const updatedVMs: any[] = []
       const batchId = `batch_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
 
       try {
