@@ -163,12 +163,6 @@ export default function SignInPage() {
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-          
-          <div className="mt-4 text-center text-sm text-gray-600">
-            <p>Test Accounts:</p>
-            <p>Admin: admin@example.com / admin123</p>
-            <p>User: user@example.com / user123</p>
-          </div>
         </CardContent>
       </Card>
     </div>
