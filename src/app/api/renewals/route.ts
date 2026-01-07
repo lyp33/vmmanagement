@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
         }
       });
 
-      recentRenewals = renewalLogs.map(log => {
+      recentRenewals = renewalLogs.map((log: any) => {
         let renewalData: any = {};
         
         try {
