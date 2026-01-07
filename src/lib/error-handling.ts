@@ -134,36 +134,8 @@ export class ErrorHandler {
       )
     }
 
-    // Handle Prisma errors
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      return this.handlePrismaError(error)
-    }
-
-    if (error instanceof Prisma.PrismaClientUnknownRequestError) {
-      errorLogger.logDatabaseError('Unknown database error', error)
-      
-      return NextResponse.json(
-        {
-          error: '数据库操作失败',
-          code: ErrorCode.DATABASE_CONNECTION_ERROR,
-          timestamp: new Date().toISOString()
-        },
-        { status: 500 }
-      )
-    }
-
-    if (error instanceof Prisma.PrismaClientValidationError) {
-      errorLogger.logValidationError('Database validation error', error)
-      
-      return NextResponse.json(
-        {
-          error: '数据验证失败',
-          code: ErrorCode.INVALID_INPUT,
-          timestamp: new Date().toISOString()
-        },
-        { status: 400 }
-      )
-    }
+    // Note: Prisma error handling removed as we use KV storage instead
+    // If you need Prisma, uncomment and import Prisma from '@prisma/client'
 
     // Handle standard JavaScript errors
     if (error instanceof Error) {
@@ -194,74 +166,6 @@ export class ErrorHandler {
       },
       { status: 500 }
     )
-  }
-
-  /**
-   * Handle Prisma-specific errors
-   */
-  private static handlePrismaError(error: Prisma.PrismaClientKnownRequestError): NextResponse<ErrorResponse> {
-    errorLogger.logDatabaseError(`Prisma error: ${error.code}`, error, {
-      prismaCode: error.code,
-      meta: error.meta
-    })
-
-    switch (error.code) {
-      case 'P2002': // Unique constraint violation
-        const target = error.meta?.target as string[]
-        const field = target?.[0] || 'field'
-        return NextResponse.json(
-          {
-            error: `${field === 'email' ? '邮箱地址' : field === 'name' ? '名称' : '字段'}已存在`,
-            code: field === 'email' ? ErrorCode.DUPLICATE_EMAIL : ErrorCode.DUPLICATE_PROJECT_NAME,
-            details: { field, constraint: 'unique' },
-            timestamp: new Date().toISOString()
-          },
-          { status: 409 }
-        )
-
-      case 'P2025': // Record not found
-        return NextResponse.json(
-          {
-            error: '请求的资源不存在',
-            code: ErrorCode.NOT_FOUND,
-            timestamp: new Date().toISOString()
-          },
-          { status: 404 }
-        )
-
-      case 'P2003': // Foreign key constraint violation
-        return NextResponse.json(
-          {
-            error: '关联数据不存在或已被删除',
-            code: ErrorCode.INVALID_INPUT,
-            details: { constraint: 'foreign_key' },
-            timestamp: new Date().toISOString()
-          },
-          { status: 400 }
-        )
-
-      case 'P2014': // Required relation missing
-        return NextResponse.json(
-          {
-            error: '缺少必需的关联数据',
-            code: ErrorCode.INVALID_INPUT,
-            details: { constraint: 'required_relation' },
-            timestamp: new Date().toISOString()
-          },
-          { status: 400 }
-        )
-
-      default:
-        return NextResponse.json(
-          {
-            error: '数据库操作失败',
-            code: ErrorCode.DATABASE_CONNECTION_ERROR,
-            details: process.env.NODE_ENV === 'development' ? { prismaCode: error.code } : undefined,
-            timestamp: new Date().toISOString()
-          },
-          { status: 500 }
-        )
-    }
   }
 
   /**
