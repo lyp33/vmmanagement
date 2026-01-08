@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { mockData } from '@/lib/mock-data'
+import { storage } from '@/lib/storage'
+import bcrypt from 'bcryptjs'
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +8,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const user = mockData.getUserById(id)
+    const user = await storage.findUserById(id)
     
     if (!user) {
       return NextResponse.json(
@@ -16,8 +17,12 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ user })
+    // Remove password from response
+    const { password, ...safeUser } = user
+
+    return NextResponse.json({ user: safeUser })
   } catch (error) {
+    console.error('Failed to fetch user:', error)
     return NextResponse.json(
       { error: 'Failed to fetch user' },
       { status: 500 }
@@ -32,7 +37,13 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const updatedUser = mockData.updateUser(id, body)
+    
+    // If password is being updated, hash it
+    if (body.password) {
+      body.password = await bcrypt.hash(body.password, 10)
+    }
+    
+    const updatedUser = await storage.updateUser(id, body)
     
     if (!updatedUser) {
       return NextResponse.json(
@@ -41,11 +52,15 @@ export async function PUT(
       )
     }
 
+    // Remove password from response
+    const { password, ...safeUser } = updatedUser
+
     return NextResponse.json({ 
-      user: updatedUser,
+      user: safeUser,
       message: 'User updated successfully'
     })
   } catch (error) {
+    console.error('Failed to update user:', error)
     return NextResponse.json(
       { error: 'Failed to update user' },
       { status: 500 }
@@ -59,19 +74,24 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    const deleted = mockData.deleteUser(id)
     
-    if (!deleted) {
+    // Check if user exists
+    const user = await storage.findUserById(id)
+    if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       )
     }
 
-    return NextResponse.json({ 
-      message: 'User deleted successfully'
-    })
+    // Note: In KV storage, we need to implement deleteUser method
+    // For now, we'll return an error
+    return NextResponse.json(
+      { error: 'User deletion not yet implemented in storage layer' },
+      { status: 501 }
+    )
   } catch (error) {
+    console.error('Failed to delete user:', error)
     return NextResponse.json(
       { error: 'Failed to delete user' },
       { status: 500 }
