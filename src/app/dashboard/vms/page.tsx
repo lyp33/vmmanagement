@@ -284,14 +284,6 @@ export default function VMsPage() {
               Manage virtual machine records and expiry dates
             </p>
           </div>
-          {isAdmin && (
-            <Link href="/dashboard/vms/new">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Create VM
-              </Button>
-            </Link>
-          )}
         </div>
 
         {error && (
