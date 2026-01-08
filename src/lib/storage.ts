@@ -38,10 +38,13 @@ export interface IStorage {
   findAllProjects(): Promise<Project[]>
   findProjectById(id: string): Promise<Project | null>
   createProject(projectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<Project>
+  updateProject(id: string, updates: Partial<Omit<Project, 'id' | 'createdAt'>>): Promise<Project | null>
+  deleteProject(id: string): Promise<boolean>
   
   // ProjectAssignment operations
   findUserProjects(userId: string): Promise<Project[]>
   createProjectAssignment(userId: string, projectId: string): Promise<ProjectAssignment>
+  removeProjectAssignment(userId: string, projectId: string): Promise<boolean>
   
   // VMRecord operations
   findVMsByUserPermissions(userId: string, isAdmin: boolean): Promise<VMRecord[]>
@@ -108,6 +111,16 @@ class StorageWrapper implements IStorage {
     return storage.createProject(projectData)
   }
 
+  async updateProject(id: string, updates: Partial<Omit<Project, 'id' | 'createdAt'>>): Promise<Project | null> {
+    const storage = await this.getImpl()
+    return storage.updateProject(id, updates)
+  }
+
+  async deleteProject(id: string): Promise<boolean> {
+    const storage = await this.getImpl()
+    return storage.deleteProject(id)
+  }
+
   async findUserProjects(userId: string): Promise<Project[]> {
     const storage = await this.getImpl()
     return storage.findUserProjects(userId)
@@ -116,6 +129,11 @@ class StorageWrapper implements IStorage {
   async createProjectAssignment(userId: string, projectId: string): Promise<ProjectAssignment> {
     const storage = await this.getImpl()
     return storage.createProjectAssignment(userId, projectId)
+  }
+
+  async removeProjectAssignment(userId: string, projectId: string): Promise<boolean> {
+    const storage = await this.getImpl()
+    return storage.removeProjectAssignment(userId, projectId)
   }
 
   async findVMsByUserPermissions(userId: string, isAdmin: boolean): Promise<VMRecord[]> {

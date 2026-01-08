@@ -195,6 +195,38 @@ class FileStorage {
     return project
   }
 
+  async updateProject(id: string, updates: Partial<Omit<Project, 'id' | 'createdAt'>>): Promise<Project | null> {
+    const data = await this.loadData()
+    const projectIndex = data.projects.findIndex(p => p.id === id)
+    
+    if (projectIndex === -1) return null
+
+    const updatedProject: Project = {
+      ...data.projects[projectIndex],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    }
+    
+    data.projects[projectIndex] = updatedProject
+    await this.saveData()
+    return updatedProject
+  }
+
+  async deleteProject(id: string): Promise<boolean> {
+    const data = await this.loadData()
+    const projectIndex = data.projects.findIndex(p => p.id === id)
+    
+    if (projectIndex === -1) return false
+
+    data.projects.splice(projectIndex, 1)
+    
+    // Also remove all project assignments
+    data.projectAssignments = data.projectAssignments.filter(pa => pa.projectId !== id)
+    
+    await this.saveData()
+    return true
+  }
+
   // ProjectAssignment 操作
   async findUserProjects(userId: string): Promise<Project[]> {
     const data = await this.loadData()
@@ -214,6 +246,22 @@ class FileStorage {
     data.projectAssignments.push(assignment)
     await this.saveData()
     return assignment
+  }
+
+  async removeProjectAssignment(userId: string, projectId: string): Promise<boolean> {
+    const data = await this.loadData()
+    const initialLength = data.projectAssignments.length
+    
+    data.projectAssignments = data.projectAssignments.filter(
+      pa => !(pa.userId === userId && pa.projectId === projectId)
+    )
+    
+    if (data.projectAssignments.length === initialLength) {
+      return false // No assignment was found
+    }
+    
+    await this.saveData()
+    return true
   }
 
   // VMRecord 操作

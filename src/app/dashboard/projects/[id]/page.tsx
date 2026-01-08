@@ -146,14 +146,14 @@ export default function ProjectDetailPage() {
     }
   }
 
-  const handleUnassignUser = async (assignmentId: string) => {
+  const handleUnassignUser = async (userId: string) => {
     if (!confirm('确定要Cancel此UserofProjectAssign?')) return
 
     try {
       const response = await fetch(`/api/projects-simple/${projectId}/assign`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assignmentId })
+        body: JSON.stringify({ userId })
       })
 
       if (!response.ok) {
@@ -428,7 +428,7 @@ export default function ProjectDetailPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleUnassignUser(assignment.id)}
+                            onClick={() => handleUnassignUser(assignment.user.id)}
                           >
                             <Trash2 className="w-4 h-4 text-red-500" />
                           </Button>

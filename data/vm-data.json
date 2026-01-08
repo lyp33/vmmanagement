@@ -29,7 +29,22 @@
     }
   ],
   "projectAssignments": [],
-  "vmRecords": [],
+  "vmRecords": [
+    {
+      "id": "c5ylvtr6r5vqa537wjwv33je",
+      "email": "test@example.com",
+      "vmAccount": "vm-test-001",
+      "vmInternalIP": "192.168.1.100",
+      "vmDomain": "vm001.test.com",
+      "vmStartDate": "2026-01-01",
+      "currentExpiryDate": "2026-12-31T00:00:00.000Z",
+      "projectId": "y21wl6tjj7972olo9fx850cl",
+      "createdBy": "xippg3be7evgp9jlcijqkaxl",
+      "createdAt": "2026-01-08T06:20:05.053Z",
+      "updatedAt": "2026-01-08T06:54:29.910Z",
+      "lastExpiryDate": "2026-07-08"
+    }
+  ],
   "auditLogs": [],
   "notificationLogs": []
 }

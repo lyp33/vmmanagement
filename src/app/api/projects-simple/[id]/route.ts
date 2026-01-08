@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { mockData } from '@/lib/mock-data'
+import { storage } from '@/lib/storage'
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const project = mockData.getProjectById(id)
+    const project = await storage.findProjectById(id)
     
     if (!project) {
       return NextResponse.json(
@@ -16,8 +16,46 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ project })
+    // Get VMs for this project
+    const allVMs = await storage.findAllVMs()
+    const projectVMs = allVMs.filter(vm => vm.projectId === id)
+
+    // Get all users and find those assigned to this project
+    const allUsers = await storage.findAllUsers()
+    const userAssignments: any[] = []
+    
+    for (const user of allUsers) {
+      const userProjects = await storage.findUserProjects(user.id)
+      const isAssigned = userProjects.some(p => p.id === id)
+      
+      if (isAssigned) {
+        userAssignments.push({
+          id: `${user.id}-${id}`, // Generate a pseudo assignment ID
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role
+          },
+          assignedAt: new Date().toISOString() // We don't have actual assignment date in current storage
+        })
+      }
+    }
+
+    // Build response with counts
+    const projectWithDetails = {
+      ...project,
+      vms: projectVMs,
+      userAssignments,
+      _count: {
+        vms: projectVMs.length,
+        userAssignments: userAssignments.length
+      }
+    }
+
+    return NextResponse.json({ project: projectWithDetails })
   } catch (error) {
+    console.error('Error fetching project:', error)
     return NextResponse.json(
       { error: 'Failed to fetch project' },
       { status: 500 }
@@ -32,7 +70,11 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const updatedProject = mockData.updateProject(id, body)
+    
+    const updatedProject = await storage.updateProject(id, {
+      name: body.name,
+      description: body.description
+    })
     
     if (!updatedProject) {
       return NextResponse.json(
@@ -46,6 +88,7 @@ export async function PUT(
       message: 'Project updated successfully'
     })
   } catch (error) {
+    console.error('Error updating project:', error)
     return NextResponse.json(
       { error: 'Failed to update project' },
       { status: 500 }
@@ -59,7 +102,19 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    const deleted = mockData.deleteProject(id)
+    
+    // Check if project has VMs
+    const allVMs = await storage.findAllVMs()
+    const projectVMs = allVMs.filter(vm => vm.projectId === id)
+    
+    if (projectVMs.length > 0) {
+      return NextResponse.json(
+        { error: 'Cannot delete project with existing VMs' },
+        { status: 400 }
+      )
+    }
+    
+    const deleted = await storage.deleteProject(id)
     
     if (!deleted) {
       return NextResponse.json(
@@ -72,6 +127,7 @@ export async function DELETE(
       message: 'Project deleted successfully'
     })
   } catch (error) {
+    console.error('Error deleting project:', error)
     return NextResponse.json(
       { error: 'Failed to delete project' },
       { status: 500 }
