@@ -34,6 +34,7 @@ interface VMRecord {
   vmAccount: string
   vmInternalIP: string
   vmDomain: string
+  vmStartDate: string
   createdAt: string
   lastExpiryDate?: string
   currentExpiryDate: string
@@ -530,6 +531,7 @@ export default function VMsPage() {
                       <TableHead>Internal IP</TableHead>
                       <TableHead>Domain</TableHead>
                       <TableHead>Project</TableHead>
+                      <TableHead>VM Start Date</TableHead>
                       <TableHead>Created At</TableHead>
                       <TableHead>Expiry Date</TableHead>
                       <TableHead>Status</TableHead>
@@ -557,14 +559,21 @@ export default function VMsPage() {
                             <Badge variant="outline">{vm.project.name}</Badge>
                           </TableCell>
                           <TableCell className="text-sm text-gray-600">
-                            {new Date(vm.createdAt).toLocaleDateString('zh-CN', {
+                            {vm.vmStartDate ? new Date(vm.vmStartDate).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit'
+                            }) : '-'}
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600">
+                            {new Date(vm.createdAt).toLocaleDateString('en-US', {
                               year: 'numeric',
                               month: '2-digit',
                               day: '2-digit'
                             })}
                           </TableCell>
                           <TableCell>
-                            {new Date(vm.currentExpiryDate).toLocaleDateString('zh-CN')}
+                            {new Date(vm.currentExpiryDate).toLocaleDateString('en-US')}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">

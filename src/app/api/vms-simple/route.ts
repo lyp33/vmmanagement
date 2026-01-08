@@ -66,10 +66,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { email, vmAccount, vmInternalIP, vmDomain, projectId, currentExpiryDate } = body
+    const { email, vmAccount, vmInternalIP, vmDomain, vmStartDate, projectId, currentExpiryDate } = body
 
     // Validate required fields
-    if (!email || !vmAccount || !vmInternalIP || !vmDomain || !projectId || !currentExpiryDate) {
+    if (!email || !vmAccount || !vmInternalIP || !vmDomain || !vmStartDate || !projectId || !currentExpiryDate) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
       vmAccount,
       vmInternalIP,
       vmDomain,
+      vmStartDate,
       currentExpiryDate,
       projectId,
       createdBy: currentUser.id

@@ -18,6 +18,7 @@ interface VMRecord {
   vmAccount: string
   vmInternalIP: string
   vmDomain: string
+  vmStartDate: string
   currentExpiryDate: string
   project: {
     id: string
@@ -35,6 +36,7 @@ interface FormData {
   vmAccount: string
   vmInternalIP: string
   vmDomain: string
+  vmStartDate: string
   projectId: string
   currentExpiryDate: string
 }
@@ -44,6 +46,7 @@ interface FormErrors {
   vmAccount?: string
   vmInternalIP?: string
   vmDomain?: string
+  vmStartDate?: string
   projectId?: string
   currentExpiryDate?: string
 }
@@ -62,6 +65,7 @@ export default function EditVMPage() {
     vmAccount: '',
     vmInternalIP: '',
     vmDomain: '',
+    vmStartDate: '',
     projectId: '',
     currentExpiryDate: ''
   })
@@ -105,6 +109,7 @@ export default function EditVMPage() {
         vmAccount: vmData.vmAccount,
         vmInternalIP: vmData.vmInternalIP,
         vmDomain: vmData.vmDomain,
+        vmStartDate: vmData.vmStartDate ? vmData.vmStartDate.split('T')[0] : '', // Convert to YYYY-MM-DD format
         projectId: vmData.project.id,
         currentExpiryDate: vmData.currentExpiryDate.split('T')[0] // Convert to YYYY-MM-DD format
       })
@@ -149,6 +154,10 @@ export default function EditVMPage() {
 
     if (!formData.vmDomain) {
       errors.vmDomain = 'Domain is required'
+    }
+
+    if (!formData.vmStartDate) {
+      errors.vmStartDate = 'VM Start Date is required'
     }
 
     if (!formData.projectId) {
@@ -339,6 +348,24 @@ export default function EditVMPage() {
                   {formErrors.vmDomain && (
                     <p className="text-sm text-red-500">{formErrors.vmDomain}</p>
                   )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="vmStartDate">VM Start Date *</Label>
+                  <Input
+                    id="vmStartDate"
+                    type="date"
+                    value={formData.vmStartDate}
+                    onChange={(e) => handleInputChange('vmStartDate', e.target.value)}
+                    className={formErrors.vmStartDate ? "border-red-500" : ""}
+                    disabled={saving}
+                  />
+                  {formErrors.vmStartDate && (
+                    <p className="text-sm text-red-500">{formErrors.vmStartDate}</p>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    The date when the VM was started/activated
+                  </p>
                 </div>
 
                 <div className="space-y-2">

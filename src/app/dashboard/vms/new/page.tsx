@@ -23,6 +23,7 @@ interface FormData {
   vmAccount: string
   vmInternalIP: string
   vmDomain: string
+  vmStartDate: string
   projectId: string
   currentExpiryDate: string
 }
@@ -32,6 +33,7 @@ interface FormErrors {
   vmAccount?: string
   vmInternalIP?: string
   vmDomain?: string
+  vmStartDate?: string
   projectId?: string
   currentExpiryDate?: string
 }
@@ -47,6 +49,7 @@ export default function NewVMPage() {
     vmAccount: '',
     vmInternalIP: '',
     vmDomain: '',
+    vmStartDate: '',
     projectId: '',
     currentExpiryDate: ''
   })
@@ -251,6 +254,24 @@ export default function NewVMPage() {
                   {formErrors.vmDomain && (
                     <p className="text-sm text-red-500">{formErrors.vmDomain}</p>
                   )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="vmStartDate">VM Start Date *</Label>
+                  <Input
+                    id="vmStartDate"
+                    type="date"
+                    value={formData.vmStartDate}
+                    onChange={(e) => handleInputChange('vmStartDate', e.target.value)}
+                    className={formErrors.vmStartDate ? "border-red-500" : ""}
+                    disabled={loading}
+                  />
+                  {formErrors.vmStartDate && (
+                    <p className="text-sm text-red-500">{formErrors.vmStartDate}</p>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    The date when the VM was started/activated
+                  </p>
                 </div>
 
                 <div className="space-y-2">

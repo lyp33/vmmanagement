@@ -33,6 +33,7 @@ export interface VMRecord {
   vmAccount: string
   vmInternalIP: string
   vmDomain: string
+  vmStartDate: string  // VM开启时间
   createdAt: string
   lastExpiryDate?: string
   currentExpiryDate: string
