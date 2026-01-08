@@ -340,9 +340,17 @@ class FileStorage {
   }
 
   async findAuditLogs(limit: number = 100): Promise<AuditLog[]> {
-    const data = await this.loadData()
-    const sorted = data.auditLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    return sorted.slice(0, limit)
+    try {
+      const data = await this.loadData()
+      if (!data.auditLogs || data.auditLogs.length === 0) {
+        return []
+      }
+      const sorted = data.auditLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      return sorted.slice(0, limit)
+    } catch (error) {
+      console.error('Error fetching audit logs from file storage:', error)
+      return []
+    }
   }
 
   // NotificationLog 操作

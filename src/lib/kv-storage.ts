@@ -326,8 +326,16 @@ class KVStorage {
   }
 
   async findAuditLogs(limit: number = 100): Promise<AuditLog[]> {
-    const logs = await kv.lrange(KEYS.AUDIT_LOGS, 0, limit - 1)
-    return logs.map(log => JSON.parse(log as string))
+    try {
+      const logs = await kv.lrange(KEYS.AUDIT_LOGS, 0, limit - 1)
+      if (!logs || logs.length === 0) {
+        return []
+      }
+      return logs.map(log => JSON.parse(log as string))
+    } catch (error) {
+      console.error('Error fetching audit logs from KV:', error)
+      return []
+    }
   }
 
   // NotificationLog operations
