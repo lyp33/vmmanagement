@@ -30,7 +30,7 @@ interface User {
   role: 'ADMIN' | 'USER'
   createdAt: string
   updatedAt: string
-  _count: {
+  _count?: {
     projectAssignments: number
   }
 }
@@ -414,7 +414,7 @@ export default function UsersPage() {
                         <TableCell>
                           <div className="flex items-center space-x-1">
                             <FolderOpen className="w-4 h-4 text-gray-400" />
-                            <span>{user._count.projectAssignments} Projects</span>
+                            <span>{user._count?.projectAssignments || 0} Projects</span>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -491,7 +491,7 @@ export default function UsersPage() {
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-orange-600">
-                    {users.reduce((sum, u) => sum + u._count.projectAssignments, 0)}
+                    {users.reduce((sum, u) => sum + (u._count?.projectAssignments || 0), 0)}
                   </p>
                   <p className="text-sm text-gray-600">Total Project Assignments</p>
                 </div>
