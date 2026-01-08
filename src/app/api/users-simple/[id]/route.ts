@@ -2,23 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { storage } from '@/lib/storage'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { getCurrentUserForAudit, safeCreateAuditLog } from '@/lib/audit-helper'
 import bcrypt from 'bcryptjs'
-
-// Helper function to get current user for audit logging
-async function getCurrentUserForAudit() {
-  try {
-    const session = await getServerSession(authOptions)
-    if (session?.user?.email) {
-      const user = await storage.findUserByEmail(session.user.email)
-      if (user) {
-        return { userId: user.id, userEmail: user.email }
-      }
-    }
-  } catch (error) {
-    console.error('Failed to get current user for audit:', error)
-  }
-  return { userId: 'system', userEmail: 'system@internal' }
-}
 
 export async function GET(
   request: NextRequest,
@@ -87,7 +72,7 @@ export async function PUT(
     if (body.role && body.role !== oldUser.role) changes.role = { from: oldUser.role, to: body.role }
     if (body.password) changes.password = 'updated'
     
-    await storage.createAuditLog({
+    await safeCreateAuditLog({
       operation: 'UPDATE_USER',
       entityType: 'User',
       entityId: id,

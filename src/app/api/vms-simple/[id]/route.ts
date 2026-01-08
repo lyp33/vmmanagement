@@ -2,22 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { storage } from '@/lib/storage'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-
-// Helper function to get current user for audit logging
-async function getCurrentUserForAudit() {
-  try {
-    const session = await getServerSession(authOptions)
-    if (session?.user?.email) {
-      const user = await storage.findUserByEmail(session.user.email)
-      if (user) {
-        return { userId: user.id, userEmail: user.email }
-      }
-    }
-  } catch (error) {
-    console.error('Failed to get current user for audit:', error)
-  }
-  return { userId: 'system', userEmail: 'system@internal' }
-}
+import { getCurrentUserForAudit, safeCreateAuditLog } from '@/lib/audit-helper'
 
 // GET /api/vms-simple/[id] - Get VM by ID
 export async function GET(
@@ -158,7 +143,7 @@ export async function PATCH(
       ? 'RENEW_VM' 
       : 'UPDATE_VM'
     
-    await storage.createAuditLog({
+    await safeCreateAuditLog({
       operation,
       entityType: 'VMRecord',
       entityId: id,
