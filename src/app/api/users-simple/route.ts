@@ -9,12 +9,26 @@ export async function GET() {
   try {
     const users = await storage.findAllUsers()
     
-    // Remove password from response
-    const safeUsers = users.map(({ password, ...user }) => user)
+    // Add project assignment counts to each user
+    const usersWithCounts = await Promise.all(
+      users.map(async (user) => {
+        // Get projects for this user
+        const userProjects = await storage.findUserProjects(user.id)
+        
+        // Remove password and add count
+        const { password, ...safeUser } = user
+        return {
+          ...safeUser,
+          _count: {
+            projectAssignments: userProjects.length
+          }
+        }
+      })
+    )
     
     return NextResponse.json({ 
-      users: safeUsers,
-      total: safeUsers.length
+      users: usersWithCounts,
+      total: usersWithCounts.length
     })
   } catch (error) {
     console.error('Failed to fetch users:', error)
