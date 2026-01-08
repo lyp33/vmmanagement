@@ -78,7 +78,7 @@ export default function NewVMPage() {
       setProjects(data.projects || [])
     } catch (error) {
       console.error('Error fetching projects:', error)
-      setError('加载Project列表Failed')
+      setError('Failed to load project list')
     }
   }
 
@@ -166,9 +166,9 @@ export default function NewVMPage() {
             Back
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">新建VMrecords</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Create New VM Record</h1>
             <p className="mt-2 text-gray-600">
-              Create新of虚拟机records
+              Create a new virtual machine record
             </p>
           </div>
         </div>
@@ -183,17 +183,17 @@ export default function NewVMPage() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Plus className="w-5 h-5" />
-              <span>VMInformation</span>
+              <span>VM Information</span>
             </CardTitle>
             <CardDescription>
-              请填写完整ofVMInformation，所有字段都是必填of
+              Please fill in complete VM information, all fields are required
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email地址 *</Label>
+                  <Label htmlFor="email">Email Address *</Label>
                   <Input
                     id="email"
                     type="email"
@@ -224,7 +224,7 @@ export default function NewVMPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="vmInternalIP">内网IP *</Label>
+                  <Label htmlFor="vmInternalIP">Internal IP *</Label>
                   <Input
                     id="vmInternalIP"
                     value={formData.vmInternalIP}
@@ -254,14 +254,14 @@ export default function NewVMPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="projectId">所属Project *</Label>
+                  <Label htmlFor="projectId">Project *</Label>
                   <Select
                     value={formData.projectId}
                     onValueChange={(value) => handleInputChange('projectId', value)}
                     disabled={loading}
                   >
                     <SelectTrigger className={formErrors.projectId ? "border-red-500" : ""}>
-                      <SelectValue placeholder="选择Project" />
+                      <SelectValue placeholder="Select Project" />
                     </SelectTrigger>
                     <SelectContent>
                       {projects.map(project => (
@@ -290,7 +290,7 @@ export default function NewVMPage() {
                     <p className="text-sm text-red-500">{formErrors.currentExpiryDate}</p>
                   )}
                   <p className="text-xs text-gray-500">
-                    默认Settings为3个月后，您可以根据需要调整
+                    Default is set to 3 months from now, you can adjust as needed
                   </p>
                 </div>
               </div>
@@ -308,12 +308,12 @@ export default function NewVMPage() {
                   {loading ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Create中...
+                      Creating...
                     </>
                   ) : (
                     <>
                       <Save className="w-4 h-4 mr-2" />
-                      CreateVM
+                      Create VM
                     </>
                   )}
                 </Button>
