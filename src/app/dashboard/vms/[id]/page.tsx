@@ -58,6 +58,8 @@ export default function VMDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const [renewing, setRenewing] = useState(false)
+
   const isAdmin = session?.user?.role === 'ADMIN'
   const vmId = params.id as string
 
@@ -107,19 +109,42 @@ export default function VMDetailPage() {
   }
 
   const handleRenewal = async () => {
+    if (!vm) return
+    
+    setRenewing(true)
+    setError('')
+    
     try {
-      const response = await fetch(`/api/vms/${vmId}/renew`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+      // Calculate new expiry date (3 months from current expiry date)
+      const currentExpiry = new Date(vm.currentExpiryDate)
+      const newExpiry = new Date(currentExpiry)
+      newExpiry.setMonth(newExpiry.getMonth() + 3)
+      
+      const response = await fetch(`/api/vms-simple/${vmId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lastExpiryDate: vm.currentExpiryDate,
+          currentExpiryDate: newExpiry.toISOString()
+        })
       })
 
-      if (!response.ok) throw new Error('Renewal failed')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Renewal failed')
+      }
       
+      // Refresh VM data
       await fetchVM()
-      setError('')
+      
+      // Show success message briefly
+      setError('VM renewed successfully for 3 months')
+      setTimeout(() => setError(''), 3000)
     } catch (error) {
       console.error('Renewal error:', error)
-      setError('Renewal failed')
+      setError(error instanceof Error ? error.message : 'Renewal failed')
+    } finally {
+      setRenewing(false)
     }
   }
 
@@ -200,9 +225,18 @@ export default function VMDetailPage() {
           <div className="flex items-center space-x-2">
             {isAdmin && (
               <>
-                <Button onClick={handleRenewal}>
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Renew
+                <Button onClick={handleRenewal} disabled={renewing}>
+                  {renewing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Renewing...
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Renew (3 months)
+                    </>
+                  )}
                 </Button>
                 <Link href={`/dashboard/vms/${vm.id}/edit`}>
                   <Button variant="outline">

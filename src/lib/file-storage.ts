@@ -229,6 +229,16 @@ class FileStorage {
     return data.vmRecords.filter(vm => projectIds.includes(vm.projectId))
   }
 
+  async findVMById(id: string): Promise<VMRecord | null> {
+    const data = await this.loadData()
+    return data.vmRecords.find(vm => vm.id === id) || null
+  }
+
+  async findAllVMs(): Promise<VMRecord[]> {
+    const data = await this.loadData()
+    return data.vmRecords
+  }
+
   async createVMRecord(vmData: Omit<VMRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<VMRecord> {
     const data = await this.loadData()
     const now = new Date().toISOString()

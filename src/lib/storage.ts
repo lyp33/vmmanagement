@@ -45,6 +45,8 @@ export interface IStorage {
   
   // VMRecord operations
   findVMsByUserPermissions(userId: string, isAdmin: boolean): Promise<VMRecord[]>
+  findVMById(id: string): Promise<VMRecord | null>
+  findAllVMs(): Promise<VMRecord[]>
   createVMRecord(vmData: Omit<VMRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<VMRecord>
   updateVMRecord(id: string, updates: Partial<Omit<VMRecord, 'id' | 'createdAt'>>): Promise<VMRecord | null>
   deleteVMRecord(id: string): Promise<boolean>
@@ -119,6 +121,16 @@ class StorageWrapper implements IStorage {
   async findVMsByUserPermissions(userId: string, isAdmin: boolean): Promise<VMRecord[]> {
     const storage = await this.getImpl()
     return storage.findVMsByUserPermissions(userId, isAdmin)
+  }
+
+  async findVMById(id: string): Promise<VMRecord | null> {
+    const storage = await this.getImpl()
+    return storage.findVMById(id)
+  }
+
+  async findAllVMs(): Promise<VMRecord[]> {
+    const storage = await this.getImpl()
+    return storage.findAllVMs()
   }
 
   async createVMRecord(vmData: Omit<VMRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<VMRecord> {
