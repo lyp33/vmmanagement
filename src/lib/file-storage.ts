@@ -275,9 +275,10 @@ class FileStorage {
     return log
   }
 
-  async findAuditLogs(): Promise<AuditLog[]> {
+  async findAuditLogs(limit: number = 100): Promise<AuditLog[]> {
     const data = await this.loadData()
-    return data.auditLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    const sorted = data.auditLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    return sorted.slice(0, limit)
   }
 
   // NotificationLog 操作

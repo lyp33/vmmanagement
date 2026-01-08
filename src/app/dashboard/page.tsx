@@ -6,10 +6,89 @@ import { Button } from "@/components/ui/button"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Server, FolderOpen, FileText, Clock, Users, AlertTriangle } from "lucide-react"
 import Link from "next/link"
+import { useEffect, useState } from "react"
+
+interface DashboardStats {
+  totalVMs: number
+  expiringSoon: number
+  totalProjects: number
+  totalUsers: number
+}
+
+interface AuditLog {
+  id: string
+  operation: string
+  entityType: string
+  timestamp: string
+  userEmail: string
+}
 
 export default function DashboardPage() {
   const { data: session } = useSession()
   const isAdmin = session?.user?.role === 'ADMIN'
+  
+  const [stats, setStats] = useState<DashboardStats>({
+    totalVMs: 0,
+    expiringSoon: 0,
+    totalProjects: 0,
+    totalUsers: 0
+  })
+  const [recentActivity, setRecentActivity] = useState<AuditLog[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch VMs
+        const vmsRes = await fetch('/api/vms')
+        const vmsData = await vmsRes.json()
+        const vms = vmsData.vms || []
+        
+        // Calculate expiring soon (within 7 days)
+        const now = new Date()
+        const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+        const expiringSoon = vms.filter((vm: any) => {
+          const expiryDate = new Date(vm.currentExpiryDate)
+          return expiryDate >= now && expiryDate <= sevenDaysFromNow
+        }).length
+
+        // Fetch Projects
+        const projectsRes = await fetch('/api/projects-simple')
+        const projectsData = await projectsRes.json()
+        const projects = projectsData.projects || []
+
+        // Fetch Users (admin only)
+        let users = []
+        if (isAdmin) {
+          const usersRes = await fetch('/api/users-simple')
+          const usersData = await usersRes.json()
+          users = usersData.users || []
+        }
+
+        // Fetch Recent Activity (admin only)
+        if (isAdmin) {
+          const auditRes = await fetch('/api/audit-simple?limit=3')
+          const auditData = await auditRes.json()
+          setRecentActivity(auditData.logs || [])
+        }
+
+        setStats({
+          totalVMs: vms.length,
+          expiringSoon,
+          totalProjects: projects.length,
+          totalUsers: users.length
+        })
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (session) {
+      fetchDashboardData()
+    }
+  }, [session, isAdmin])
 
   const quickActions = [
     {
@@ -35,36 +114,63 @@ export default function DashboardPage() {
     }] : [])
   ]
 
-  const stats = [
+  const statsDisplay = [
     {
       title: "Expiring Soon",
-      value: "5",
+      value: loading ? "..." : stats.expiringSoon.toString(),
       description: "Expiring within 7 days",
       icon: AlertTriangle,
       color: "text-red-600"
     },
     {
       title: "Total VMs",
-      value: "24",
+      value: loading ? "..." : stats.totalVMs.toString(),
       description: "Active virtual machines",
       icon: Server,
       color: "text-blue-600"
     },
     {
       title: "Projects",
-      value: "8",
+      value: loading ? "..." : stats.totalProjects.toString(),
       description: "Active projects",
       icon: FolderOpen,
       color: "text-green-600"
     },
     ...(isAdmin ? [{
       title: "Users",
-      value: "12",
+      value: loading ? "..." : stats.totalUsers.toString(),
       description: "System users",
       icon: Users,
       color: "text-purple-600"
     }] : [])
   ]
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp)
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const getOperationColor = (operation: string) => {
+    if (operation.includes('CREATE')) return 'bg-green-500'
+    if (operation.includes('UPDATE') || operation.includes('RENEW')) return 'bg-blue-500'
+    if (operation.includes('DELETE')) return 'bg-red-500'
+    return 'bg-yellow-500'
+  }
+
+  const getOperationText = (log: AuditLog) => {
+    const { operation, entityType } = log
+    if (operation === 'CREATE') return `Created ${entityType.toLowerCase()}`
+    if (operation === 'UPDATE') return `Updated ${entityType.toLowerCase()}`
+    if (operation === 'DELETE') return `Deleted ${entityType.toLowerCase()}`
+    if (operation === 'RENEW') return `Renewed ${entityType.toLowerCase()}`
+    return operation
+  }
 
   return (
     <DashboardLayout>
@@ -86,7 +192,7 @@ export default function DashboardPage() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => {
+          {statsDisplay.map((stat, index) => {
             const Icon = stat.icon
             return (
               <Card key={index}>
@@ -157,23 +263,22 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3 text-sm">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-gray-600">2024-01-04 10:30</span>
-                <span>VM vm-001 renewed successfully</span>
+            {loading ? (
+              <div className="text-center text-gray-500 py-4">Loading...</div>
+            ) : recentActivity.length > 0 ? (
+              <div className="space-y-3">
+                {recentActivity.map((log) => (
+                  <div key={log.id} className="flex items-center space-x-3 text-sm">
+                    <div className={`w-2 h-2 ${getOperationColor(log.operation)} rounded-full`}></div>
+                    <span className="text-gray-600">{formatTimestamp(log.timestamp)}</span>
+                    <span>{getOperationText(log)}</span>
+                    <span className="text-gray-500">by {log.userEmail}</span>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center space-x-3 text-sm">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-gray-600">2024-01-04 09:15</span>
-                <span>Created new project "Test Project A"</span>
-              </div>
-              <div className="flex items-center space-x-3 text-sm">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span className="text-gray-600">2024-01-04 08:45</span>
-                <span>Sent expiry reminder emails (5 VMs)</span>
-              </div>
-            </div>
+            ) : (
+              <div className="text-center text-gray-500 py-4">No recent activity</div>
+            )}
             {isAdmin && (
               <div className="mt-4">
                 <Link href="/dashboard/audit">

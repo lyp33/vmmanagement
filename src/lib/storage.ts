@@ -50,7 +50,7 @@ export interface IStorage {
   
   // AuditLog operations
   createAuditLog(logData: Omit<AuditLog, 'id' | 'timestamp'>): Promise<AuditLog>
-  findAuditLogs(): Promise<AuditLog[]>
+  findAuditLogs(limit?: number): Promise<AuditLog[]>
   
   // NotificationLog operations
   createNotificationLog(logData: Omit<NotificationLog, 'id' | 'createdAt'>): Promise<NotificationLog>
@@ -135,9 +135,9 @@ class StorageWrapper implements IStorage {
     return storage.createAuditLog(logData)
   }
 
-  async findAuditLogs(): Promise<AuditLog[]> {
+  async findAuditLogs(limit: number = 100): Promise<AuditLog[]> {
     const storage = await this.getImpl()
-    return storage.findAuditLogs()
+    return storage.findAuditLogs(limit)
   }
 
   async createNotificationLog(logData: Omit<NotificationLog, 'id' | 'createdAt'>): Promise<NotificationLog> {
