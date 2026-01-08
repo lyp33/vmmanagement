@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
+import { useToast } from "@/providers/toast-provider"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -58,6 +59,7 @@ export default function VMDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { data: session } = useSession()
+  const { toast } = useToast()
   const [vm, setVM] = useState<VMRecord | null>(null)
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
@@ -132,7 +134,11 @@ export default function VMDetailPage() {
         // Validate that the new date is after current expiry date
         const currentExpiry = new Date(vm.currentExpiryDate)
         if (newExpiryDate <= currentExpiry) {
-          setError('New expiry date must be after the current expiry date')
+          toast({
+            title: 'Invalid Date',
+            description: 'New expiry date must be after the current expiry date',
+            variant: 'error'
+          })
           setRenewing(false)
           return
         }
@@ -157,20 +163,27 @@ export default function VMDetailPage() {
         throw new Error(errorData.error || 'Renewal failed')
       }
       
-      // Refresh VM data
-      await fetchVM()
+      // Refresh VM data and audit logs
+      await Promise.all([fetchVM(), fetchAuditLogs()])
       
       // Close dialog and reset form
       setShowRenewDialog(false)
       setSpecificExpiryDate('')
       setRenewalMonths(3)
       
-      // Show success message briefly
-      setError('VM renewed successfully')
-      setTimeout(() => setError(''), 3000)
+      // Show success toast
+      toast({
+        title: 'Success',
+        description: 'VM renewed successfully',
+        variant: 'success'
+      })
     } catch (error) {
       console.error('Renewal error:', error)
-      setError(error instanceof Error ? error.message : 'Renewal failed')
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Renewal failed',
+        variant: 'error'
+      })
     } finally {
       setRenewing(false)
     }
@@ -267,12 +280,6 @@ export default function VMDetailPage() {
             )}
           </div>
         </div>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Info */}

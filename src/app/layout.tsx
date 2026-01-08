@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthSessionProvider } from "@/components/providers/session-provider";
+import { ToastProvider } from "@/providers/toast-provider";
+import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from "@/components/error-boundary";
 import "./globals.css";
 
@@ -31,7 +33,10 @@ export default function RootLayout({
       >
         <ErrorBoundary>
           <AuthSessionProvider>
-            {children}
+            <ToastProvider>
+              {children}
+              <Toaster />
+            </ToastProvider>
           </AuthSessionProvider>
         </ErrorBoundary>
       </body>

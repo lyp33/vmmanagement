@@ -28,7 +28,14 @@
       "updatedAt": "2026-01-08T02:07:27.125Z"
     }
   ],
-  "projectAssignments": [],
+  "projectAssignments": [
+    {
+      "id": "d1o34muu262z8fgajz92g69w",
+      "userId": "dcacyqbrzbmtxf4k2722d3g0",
+      "projectId": "y21wl6tjj7972olo9fx850cl",
+      "assignedAt": "2026-01-08T15:31:49.095Z"
+    }
+  ],
   "vmRecords": [
     {
       "id": "c5ylvtr6r5vqa537wjwv33je",
@@ -37,14 +44,91 @@
       "vmInternalIP": "192.168.1.100",
       "vmDomain": "vm001.test.com",
       "vmStartDate": "2026-01-01",
-      "currentExpiryDate": "2026-12-31T00:00:00.000Z",
+      "currentExpiryDate": "2028-01-01T00:00:00.000Z",
       "projectId": "y21wl6tjj7972olo9fx850cl",
       "createdBy": "xippg3be7evgp9jlcijqkaxl",
       "createdAt": "2026-01-08T06:20:05.053Z",
-      "updatedAt": "2026-01-08T06:54:29.910Z",
-      "lastExpiryDate": "2026-07-08"
+      "updatedAt": "2026-01-08T15:44:38.465Z",
+      "lastExpiryDate": "2027-10-01T00:00:00.000Z"
     }
   ],
-  "auditLogs": [],
+  "auditLogs": [
+    {
+      "id": "sdx8i9c4dwhry9ejwljr05sj",
+      "operation": "RENEW_VM",
+      "entityType": "VMRecord",
+      "entityId": "c5ylvtr6r5vqa537wjwv33je",
+      "userId": "xippg3be7evgp9jlcijqkaxl",
+      "userEmail": "admin@123.com",
+      "changes": {
+        "lastExpiryDate": {
+          "from": "2026-07-08",
+          "to": "2026-12-31T00:00:00.000Z"
+        },
+        "currentExpiryDate": {
+          "from": "2026-12-31T00:00:00.000Z",
+          "to": "2027-03-31T00:00:00.000Z"
+        }
+      },
+      "timestamp": "2026-01-08T15:25:39.352Z"
+    },
+    {
+      "id": "ek3466icrvdr3nolnuxt8qp4",
+      "operation": "RENEW_VM",
+      "entityType": "VMRecord",
+      "entityId": "c5ylvtr6r5vqa537wjwv33je",
+      "userId": "xippg3be7evgp9jlcijqkaxl",
+      "userEmail": "admin@123.com",
+      "changes": {
+        "lastExpiryDate": {
+          "from": "2026-12-31T00:00:00.000Z",
+          "to": "2027-03-31T00:00:00.000Z"
+        },
+        "currentExpiryDate": {
+          "from": "2027-03-31T00:00:00.000Z",
+          "to": "2027-07-01T00:00:00.000Z"
+        }
+      },
+      "timestamp": "2026-01-08T15:26:38.655Z"
+    },
+    {
+      "id": "vkf8naqu3ti6a3pc6g512luy",
+      "operation": "RENEW_VM",
+      "entityType": "VMRecord",
+      "entityId": "c5ylvtr6r5vqa537wjwv33je",
+      "userId": "xippg3be7evgp9jlcijqkaxl",
+      "userEmail": "admin@123.com",
+      "changes": {
+        "lastExpiryDate": {
+          "from": "2027-03-31T00:00:00.000Z",
+          "to": "2027-07-01T00:00:00.000Z"
+        },
+        "currentExpiryDate": {
+          "from": "2027-07-01T00:00:00.000Z",
+          "to": "2027-10-01T00:00:00.000Z"
+        }
+      },
+      "timestamp": "2026-01-08T15:41:57.573Z"
+    },
+    {
+      "id": "b207rpu5p8h0w0ely3estuh8",
+      "operation": "RENEW_VM",
+      "entityType": "VMRecord",
+      "entityId": "c5ylvtr6r5vqa537wjwv33je",
+      "userId": "xippg3be7evgp9jlcijqkaxl",
+      "userEmail": "admin@123.com",
+      "changes": {
+        "lastExpiryDate": {
+          "from": "2027-07-01T00:00:00.000Z",
+          "to": "2027-10-01T00:00:00.000Z"
+        },
+        "currentExpiryDate": {
+          "from": "2027-10-01T00:00:00.000Z",
+          "to": "2028-01-01T00:00:00.000Z"
+        }
+      },
+      "timestamp": "2026-01-08T15:44:38.511Z"
+    }
+  ],
   "notificationLogs": []
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
+import { useToast } from "@/providers/toast-provider"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -61,6 +62,7 @@ export default function ProjectDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { data: session } = useSession()
+  const { toast } = useToast()
   const [project, setProject] = useState<Project | null>(null)
   const [availableUsers, setAvailableUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
@@ -138,9 +140,19 @@ export default function ProjectDetailPage() {
       await fetchProject()
       setShowAssignDialog(false)
       setSelectedUserId('')
+      
+      toast({
+        title: 'Success',
+        description: 'User assigned to project successfully',
+        variant: 'success'
+      })
     } catch (error: any) {
       console.error('Error assigning user:', error)
-      setError(error.message || 'AssignUserFailed')
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to assign user',
+        variant: 'error'
+      })
     } finally {
       setAssigning(false)
     }
@@ -162,9 +174,19 @@ export default function ProjectDetailPage() {
       }
 
       await fetchProject()
+      
+      toast({
+        title: 'Success',
+        description: 'User unassigned from project successfully',
+        variant: 'success'
+      })
     } catch (error: any) {
       console.error('Error unassigning user:', error)
-      setError(error.message || 'CancelAssignFailed')
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to unassign user',
+        variant: 'error'
+      })
     }
   }
 
@@ -306,12 +328,6 @@ export default function ProjectDetailPage() {
             </div>
           )}
         </div>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
