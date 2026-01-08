@@ -136,6 +136,11 @@ class FileStorage {
     return data.users.find(user => user.id === id) || null
   }
 
+  async findAllUsers(): Promise<User[]> {
+    const data = await this.loadData()
+    return data.users
+  }
+
   async createUser(userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
     const data = await this.loadData()
     const now = new Date().toISOString()

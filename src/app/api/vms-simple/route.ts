@@ -1,15 +1,18 @@
-import { NextResponse } from 'next/server'
-import { mockData } from '@/lib/mock-data'
+import { NextRequest, NextResponse } from 'next/server'
+import { storage } from '@/lib/storage'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 // GET /api/vms-simple - Get all VMs
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const projectId = searchParams.get('projectId')
     const expiryStatus = searchParams.get('expiryStatus')
 
-    let vms = mockData.getVMs()
+    // Get all VMs from storage
+    let vms = await storage.findAllVMs()
 
     // Apply filters
     if (search) {
@@ -22,7 +25,7 @@ export async function GET(request: Request) {
     }
 
     if (projectId) {
-      vms = vms.filter(vm => vm.project.id === projectId)
+      vms = vms.filter(vm => vm.projectId === projectId)
     }
 
     if (expiryStatus && expiryStatus !== 'all') {
@@ -52,8 +55,16 @@ export async function GET(request: Request) {
 }
 
 // POST /api/vms-simple - Create new VM
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json()
     const { email, vmAccount, vmInternalIP, vmDomain, projectId, currentExpiryDate } = body
 
@@ -66,7 +77,7 @@ export async function POST(request: Request) {
     }
 
     // Find project
-    const project = mockData.getProjectById(projectId)
+    const project = await storage.findProjectById(projectId)
     if (!project) {
       return NextResponse.json(
         { error: 'Project not found' },
@@ -74,18 +85,24 @@ export async function POST(request: Request) {
       )
     }
 
+    // Get current user
+    const currentUser = await storage.findUserByEmail(session.user.email)
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
     // Create VM
-    const newVM = mockData.createVM({
+    const newVM = await storage.createVMRecord({
       email,
       vmAccount,
       vmInternalIP,
       vmDomain,
       currentExpiryDate,
-      project: {
-        id: project.id,
-        name: project.name
-      },
-      createdBy: 'admin'
+      projectId,
+      createdBy: currentUser.id
     })
 
     return NextResponse.json(newVM, { status: 201 })

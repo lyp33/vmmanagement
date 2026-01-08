@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { mockData } from '@/lib/mock-data'
+import { storage } from '@/lib/storage'
+import bcrypt from 'bcryptjs'
 
 export async function GET() {
   try {
-    const users = mockData.getUsers()
+    const users = await storage.findAllUsers()
+    
+    // Remove password from response
+    const safeUsers = users.map(({ password, ...user }) => user)
+    
     return NextResponse.json({ 
-      users,
-      total: users.length
+      users: safeUsers,
+      total: safeUsers.length
     })
   } catch (error) {
+    console.error('Failed to fetch users:', error)
     return NextResponse.json(
       { error: 'Failed to fetch users' },
       { status: 500 }
@@ -29,9 +35,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate role
+    if (role !== 'ADMIN' && role !== 'USER') {
+      return NextResponse.json(
+        { error: 'Invalid role. Must be ADMIN or USER' },
+        { status: 400 }
+      )
+    }
+
     // Check if user already exists
-    const users = mockData.getUsers()
-    const existingUser = users.find(u => u.email === email)
+    const existingUser = await storage.findUserByEmail(email)
     if (existingUser) {
       return NextResponse.json(
         { error: 'User with this email already exists' },
@@ -39,21 +52,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10)
+
     // Create new user
-    const newUser = mockData.createUser({
+    const newUser = await storage.createUser({
       email,
       name,
-      role: role as 'ADMIN' | 'USER',
-      _count: {
-        projectAssignments: 0
-      }
+      password: hashedPassword,
+      role: role as 'ADMIN' | 'USER'
     })
 
+    // Remove password from response
+    const { password: _, ...safeUser } = newUser
+
     return NextResponse.json({ 
-      user: newUser,
+      user: safeUser,
       message: 'User created successfully'
     }, { status: 201 })
   } catch (error) {
+    console.error('Failed to create user:', error)
     return NextResponse.json(
       { error: 'Failed to create user' },
       { status: 500 }

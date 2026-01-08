@@ -30,6 +30,7 @@ export interface IStorage {
   // User operations
   findUserByEmail(email: string): Promise<User | null>
   findUserById(id: string): Promise<User | null>
+  findAllUsers(): Promise<User[]>
   createUser(userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User>
   updateUser(id: string, updates: Partial<Omit<User, 'id' | 'createdAt'>>): Promise<User | null>
   
@@ -73,6 +74,11 @@ class StorageWrapper implements IStorage {
   async findUserById(id: string): Promise<User | null> {
     const storage = await this.getImpl()
     return storage.findUserById(id)
+  }
+
+  async findAllUsers(): Promise<User[]> {
+    const storage = await this.getImpl()
+    return storage.findAllUsers()
   }
 
   async createUser(userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {

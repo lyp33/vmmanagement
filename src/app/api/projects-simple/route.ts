@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { mockData } from '@/lib/mock-data'
+import { storage } from '@/lib/storage'
 
 export async function GET() {
   try {
-    const projects = mockData.getProjects()
+    const projects = await storage.findAllProjects()
     return NextResponse.json({ 
       projects,
       total: projects.length
     })
   } catch (error) {
+    console.error('Failed to fetch projects:', error)
     return NextResponse.json(
       { error: 'Failed to fetch projects' },
       { status: 500 }
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if project with same name already exists
-    const projects = mockData.getProjects()
+    const projects = await storage.findAllProjects()
     const existingProject = projects.find(p => p.name === name)
     if (existingProject) {
       return NextResponse.json(
@@ -40,13 +41,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new project
-    const newProject = mockData.createProject({
+    const newProject = await storage.createProject({
       name,
-      description,
-      _count: {
-        vms: 0,
-        userAssignments: 0
-      }
+      description
     })
 
     return NextResponse.json({ 
@@ -54,6 +51,7 @@ export async function POST(request: NextRequest) {
       message: 'Project created successfully'
     }, { status: 201 })
   } catch (error) {
+    console.error('Failed to create project:', error)
     return NextResponse.json(
       { error: 'Failed to create project' },
       { status: 500 }
