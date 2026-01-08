@@ -28,7 +28,7 @@ interface Project {
   description?: string
   createdAt: string
   updatedAt: string
-  _count: {
+  _count?: {
     vms: number
     userAssignments: number
   }
@@ -363,7 +363,7 @@ export default function ProjectsPage() {
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-purple-600">
-                    {projects.reduce((sum, p) => sum + p._count.userAssignments, 0)}
+                    {projects.reduce((sum, p) => sum + (p._count?.userAssignments || 0), 0)}
                   </p>
                   <p className="text-sm text-gray-600">User Assignments</p>
                 </div>

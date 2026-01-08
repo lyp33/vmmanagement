@@ -19,7 +19,15 @@
       "updatedAt": "2026-01-07T15:22:26.940Z"
     }
   ],
-  "projects": [],
+  "projects": [
+    {
+      "id": "y21wl6tjj7972olo9fx850cl",
+      "name": "Test Project",
+      "description": "Test project for VM management",
+      "createdAt": "2026-01-08T02:07:27.125Z",
+      "updatedAt": "2026-01-08T02:07:27.125Z"
+    }
+  ],
   "projectAssignments": [],
   "vmRecords": [],
   "auditLogs": [],
