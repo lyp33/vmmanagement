@@ -331,7 +331,13 @@ class KVStorage {
       if (!logs || logs.length === 0) {
         return []
       }
-      return logs.map(log => JSON.parse(log as string))
+      // KV may return objects or strings, handle both cases
+      return logs.map(log => {
+        if (typeof log === 'string') {
+          return JSON.parse(log)
+        }
+        return log as AuditLog
+      })
     } catch (error) {
       console.error('Error fetching audit logs from KV:', error)
       return []
