@@ -28,14 +28,7 @@
       "updatedAt": "2026-01-08T02:07:27.125Z"
     }
   ],
-  "projectAssignments": [
-    {
-      "id": "d1o34muu262z8fgajz92g69w",
-      "userId": "dcacyqbrzbmtxf4k2722d3g0",
-      "projectId": "y21wl6tjj7972olo9fx850cl",
-      "assignedAt": "2026-01-08T15:31:49.095Z"
-    }
-  ],
+  "projectAssignments": [],
   "vmRecords": [
     {
       "id": "c5ylvtr6r5vqa537wjwv33je",

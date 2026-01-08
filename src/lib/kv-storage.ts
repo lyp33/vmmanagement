@@ -204,6 +204,10 @@ class KVStorage {
     return projects
   }
 
+  async findUserProjectAssignments(userId: string): Promise<ProjectAssignment[]> {
+    return await kv.get<ProjectAssignment[]>(`user:${userId}:projects`) || []
+  }
+
   async createProjectAssignment(userId: string, projectId: string): Promise<ProjectAssignment> {
     const assignment: ProjectAssignment = {
       id: createId(),

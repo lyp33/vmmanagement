@@ -9,26 +9,40 @@ export async function GET() {
   try {
     const users = await storage.findAllUsers()
     
-    // Add project assignment counts to each user
-    const usersWithCounts = await Promise.all(
+    // Add project assignment details to each user
+    const usersWithProjects = await Promise.all(
       users.map(async (user) => {
-        // Get projects for this user
-        const userProjects = await storage.findUserProjects(user.id)
+        // Get project assignments for this user
+        const assignments = await storage.findUserProjectAssignments(user.id)
         
-        // Remove password and add count
+        // Get full project details for each assignment
+        const projectDetails = await Promise.all(
+          assignments.map(async (assignment) => {
+            const project = await storage.findProjectById(assignment.projectId)
+            return {
+              id: assignment.id,
+              projectId: assignment.projectId,
+              projectName: project?.name || 'Unknown Project',
+              assignedAt: assignment.assignedAt
+            }
+          })
+        )
+        
+        // Remove password and add project details
         const { password, ...safeUser } = user
         return {
           ...safeUser,
+          projectAssignments: projectDetails,
           _count: {
-            projectAssignments: userProjects.length
+            projectAssignments: projectDetails.length
           }
         }
       })
     )
     
     return NextResponse.json({ 
-      users: usersWithCounts,
-      total: usersWithCounts.length
+      users: usersWithProjects,
+      total: usersWithProjects.length
     })
   } catch (error) {
     console.error('Failed to fetch users:', error)

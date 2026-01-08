@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
+import { useToast } from "@/providers/toast-provider"
 import { AdminDashboardLayout } from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -20,7 +21,8 @@ import {
   User,
   Calendar,
   FolderOpen,
-  Trash2
+  Trash2,
+  X
 } from "lucide-react"
 
 interface User {
@@ -30,6 +32,12 @@ interface User {
   role: 'ADMIN' | 'USER'
   createdAt: string
   updatedAt: string
+  projectAssignments?: Array<{
+    id: string
+    projectId: string
+    projectName: string
+    assignedAt: string
+  }>
   _count?: {
     projectAssignments: number
   }
@@ -44,6 +52,7 @@ interface NewUserForm {
 
 export default function UsersPage() {
   const { data: session } = useSession()
+  const { toast } = useToast()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -166,9 +175,51 @@ export default function UsersPage() {
       }
 
       await fetchUsers()
+      toast({
+        title: 'Success',
+        description: 'User deleted successfully',
+        variant: 'success'
+      })
     } catch (error: any) {
       console.error('Error deleting user:', error)
-      setError(error.message || 'Failed to delete user')
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete user',
+        variant: 'error'
+      })
+    }
+  }
+
+  const handleRemoveProjectAssignment = async (projectId: string, userId: string, projectName: string) => {
+    if (!confirm(`Remove user from project "${projectName}"?`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/projects-simple/${projectId}/assign`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to remove assignment')
+      }
+
+      await fetchUsers()
+      toast({
+        title: 'Success',
+        description: `User removed from project "${projectName}"`,
+        variant: 'success'
+      })
+    } catch (error: any) {
+      console.error('Error removing assignment:', error)
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove assignment',
+        variant: 'error'
+      })
     }
   }
 
@@ -412,10 +463,34 @@ export default function UsersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center space-x-1">
-                            <FolderOpen className="w-4 h-4 text-gray-400" />
-                            <span>{user._count?.projectAssignments || 0} Projects</span>
-                          </div>
+                          {user.projectAssignments && user.projectAssignments.length > 0 ? (
+                            <div className="space-y-1">
+                              {user.projectAssignments.map((assignment) => (
+                                <div 
+                                  key={assignment.id} 
+                                  className="flex items-center justify-between gap-2 text-sm bg-gray-50 px-2 py-1 rounded"
+                                >
+                                  <span className="flex-1">{assignment.projectName}</span>
+                                  <button
+                                    onClick={() => handleRemoveProjectAssignment(
+                                      assignment.projectId,
+                                      user.id,
+                                      assignment.projectName
+                                    )}
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded p-1"
+                                    title="Remove from project"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-1 text-gray-400">
+                              <FolderOpen className="w-4 h-4" />
+                              <span className="text-sm">No projects</span>
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-1 text-sm text-gray-500">

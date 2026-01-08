@@ -235,6 +235,11 @@ class FileStorage {
     return data.projects.filter(project => projectIds.includes(project.id))
   }
 
+  async findUserProjectAssignments(userId: string): Promise<ProjectAssignment[]> {
+    const data = await this.loadData()
+    return data.projectAssignments.filter(pa => pa.userId === userId)
+  }
+
   async createProjectAssignment(userId: string, projectId: string): Promise<ProjectAssignment> {
     const data = await this.loadData()
     const assignment: ProjectAssignment = {

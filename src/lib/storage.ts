@@ -43,6 +43,7 @@ export interface IStorage {
   
   // ProjectAssignment operations
   findUserProjects(userId: string): Promise<Project[]>
+  findUserProjectAssignments(userId: string): Promise<ProjectAssignment[]>
   createProjectAssignment(userId: string, projectId: string): Promise<ProjectAssignment>
   removeProjectAssignment(userId: string, projectId: string): Promise<boolean>
   
@@ -124,6 +125,11 @@ class StorageWrapper implements IStorage {
   async findUserProjects(userId: string): Promise<Project[]> {
     const storage = await this.getImpl()
     return storage.findUserProjects(userId)
+  }
+
+  async findUserProjectAssignments(userId: string): Promise<ProjectAssignment[]> {
+    const storage = await this.getImpl()
+    return storage.findUserProjectAssignments(userId)
   }
 
   async createProjectAssignment(userId: string, projectId: string): Promise<ProjectAssignment> {
