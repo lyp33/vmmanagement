@@ -8,6 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { 
   ArrowLeft, 
   Edit, 
@@ -60,6 +64,9 @@ export default function VMDetailPage() {
   const [error, setError] = useState('')
 
   const [renewing, setRenewing] = useState(false)
+  const [showRenewDialog, setShowRenewDialog] = useState(false)
+  const [renewalMonths, setRenewalMonths] = useState(3)
+  const [specificExpiryDate, setSpecificExpiryDate] = useState('')
 
   const isAdmin = session?.user?.role === 'ADMIN'
   const vmId = params.id as string
@@ -116,17 +123,32 @@ export default function VMDetailPage() {
     setError('')
     
     try {
-      // Calculate new expiry date (3 months from current expiry date)
-      const currentExpiry = new Date(vm.currentExpiryDate)
-      const newExpiry = new Date(currentExpiry)
-      newExpiry.setMonth(newExpiry.getMonth() + 3)
+      let newExpiryDate: Date
+      
+      // Priority 1: Use specific expiry date if provided
+      if (specificExpiryDate) {
+        newExpiryDate = new Date(specificExpiryDate)
+        
+        // Validate that the new date is after current expiry date
+        const currentExpiry = new Date(vm.currentExpiryDate)
+        if (newExpiryDate <= currentExpiry) {
+          setError('New expiry date must be after the current expiry date')
+          setRenewing(false)
+          return
+        }
+      } else {
+        // Priority 2: Use renewal months to calculate from current expiry date
+        const currentExpiry = new Date(vm.currentExpiryDate)
+        newExpiryDate = new Date(currentExpiry)
+        newExpiryDate.setMonth(newExpiryDate.getMonth() + renewalMonths)
+      }
       
       const response = await fetch(`/api/vms-simple/${vmId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lastExpiryDate: vm.currentExpiryDate,
-          currentExpiryDate: newExpiry.toISOString()
+          currentExpiryDate: newExpiryDate.toISOString()
         })
       })
 
@@ -138,8 +160,13 @@ export default function VMDetailPage() {
       // Refresh VM data
       await fetchVM()
       
+      // Close dialog and reset form
+      setShowRenewDialog(false)
+      setSpecificExpiryDate('')
+      setRenewalMonths(3)
+      
       // Show success message briefly
-      setError('VM renewed successfully for 3 months')
+      setError('VM renewed successfully')
       setTimeout(() => setError(''), 3000)
     } catch (error) {
       console.error('Renewal error:', error)
@@ -226,18 +253,9 @@ export default function VMDetailPage() {
           <div className="flex items-center space-x-2">
             {isAdmin && (
               <>
-                <Button onClick={handleRenewal} disabled={renewing}>
-                  {renewing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Renewing...
-                    </>
-                  ) : (
-                    <>
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Renew (3 months)
-                    </>
-                  )}
+                <Button onClick={() => setShowRenewDialog(true)}>
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Renew
                 </Button>
                 <Link href={`/dashboard/vms/${vm.id}/edit`}>
                   <Button variant="outline">
@@ -444,9 +462,9 @@ export default function VMDetailPage() {
                   <CardTitle>Quick Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <Button onClick={handleRenewal} className="w-full">
+                  <Button onClick={() => setShowRenewDialog(true)} className="w-full">
                     <Calendar className="w-4 h-4 mr-2" />
-                    Renew 3 Months
+                    Renew VM
                   </Button>
                   <Link href={`/dashboard/vms/${vm.id}/edit`}>
                     <Button variant="outline" className="w-full">
@@ -459,6 +477,105 @@ export default function VMDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Renew Dialog */}
+        <Dialog open={showRenewDialog} onOpenChange={setShowRenewDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Renew VM</DialogTitle>
+              <DialogDescription>
+                Extend the expiry date for {vm.vmAccount}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="specificExpiryDate">Specific Expiry Date (Optional)</Label>
+                <Input
+                  id="specificExpiryDate"
+                  type="date"
+                  value={specificExpiryDate}
+                  onChange={(e) => setSpecificExpiryDate(e.target.value)}
+                  disabled={renewing}
+                  min={new Date(vm.currentExpiryDate).toISOString().split('T')[0]}
+                />
+                <p className="text-sm text-gray-500">
+                  If specified, this date will be used as the new expiry date
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="renewalMonths">Or Extend by Months</Label>
+                <Select
+                  value={renewalMonths.toString()}
+                  onValueChange={(value) => setRenewalMonths(parseInt(value))}
+                  disabled={renewing || !!specificExpiryDate}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 Month</SelectItem>
+                    <SelectItem value="2">2 Months</SelectItem>
+                    <SelectItem value="3">3 Months (Default)</SelectItem>
+                    <SelectItem value="6">6 Months</SelectItem>
+                    <SelectItem value="12">12 Months</SelectItem>
+                    <SelectItem value="24">24 Months</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-gray-500">
+                  {specificExpiryDate 
+                    ? 'Disabled when specific date is set' 
+                    : `The expiry date will be extended by ${renewalMonths} month(s) from the current expiry date`}
+                </p>
+              </div>
+
+              <Alert>
+                <AlertDescription>
+                  <strong>Current Expiry:</strong> {new Date(vm.currentExpiryDate).toLocaleDateString('en-US')}
+                  <br />
+                  <strong>New Expiry:</strong> {
+                    specificExpiryDate 
+                      ? new Date(specificExpiryDate).toLocaleDateString('en-US')
+                      : (() => {
+                          const newDate = new Date(vm.currentExpiryDate)
+                          newDate.setMonth(newDate.getMonth() + renewalMonths)
+                          return newDate.toLocaleDateString('en-US')
+                        })()
+                  }
+                </AlertDescription>
+              </Alert>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRenewDialog(false)
+                  setSpecificExpiryDate('')
+                  setRenewalMonths(3)
+                }}
+                disabled={renewing}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleRenewal}
+                disabled={renewing}
+              >
+                {renewing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Renewing...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Confirm Renewal
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   )
