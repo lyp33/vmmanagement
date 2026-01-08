@@ -14,10 +14,33 @@ export async function GET(request: NextRequest) {
     // Get all VMs from storage
     let vms = await storage.findAllVMs()
 
+    // Fetch all projects for mapping
+    const projects = await storage.findAllProjects()
+    const projectMap = new Map(projects.map(p => [p.id, p]))
+
+    // Add project information to each VM
+    const vmsWithProjects = vms.map(vm => {
+      const project = projectMap.get(vm.projectId)
+      return {
+        ...vm,
+        project: project ? {
+          id: project.id,
+          name: project.name,
+          description: project.description
+        } : {
+          id: vm.projectId,
+          name: 'Unknown Project',
+          description: undefined
+        }
+      }
+    })
+
     // Apply filters
+    let filteredVMs = vmsWithProjects
+    
     if (search) {
       const searchLower = search.toLowerCase()
-      vms = vms.filter(vm => 
+      filteredVMs = filteredVMs.filter(vm => 
         vm.email.toLowerCase().includes(searchLower) ||
         vm.vmAccount.toLowerCase().includes(searchLower) ||
         vm.vmDomain.toLowerCase().includes(searchLower)
@@ -25,12 +48,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (projectId) {
-      vms = vms.filter(vm => vm.projectId === projectId)
+      filteredVMs = filteredVMs.filter(vm => vm.projectId === projectId)
     }
 
     if (expiryStatus && expiryStatus !== 'all') {
       const now = new Date()
-      vms = vms.filter(vm => {
+      filteredVMs = filteredVMs.filter(vm => {
         const expiry = new Date(vm.currentExpiryDate)
         const daysUntilExpiry = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
         
@@ -42,8 +65,8 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      vms,
-      total: vms.length
+      vms: filteredVMs,
+      total: filteredVMs.length
     })
   } catch (error) {
     console.error('Error fetching VMs:', error)

@@ -17,7 +17,24 @@ export async function GET(
       )
     }
 
-    return NextResponse.json(vm)
+    // Fetch project information
+    const project = await storage.findProjectById(vm.projectId)
+    if (!project) {
+      return NextResponse.json(
+        { error: 'Project not found' },
+        { status: 404 }
+      )
+    }
+
+    // Return VM with project information
+    return NextResponse.json({
+      ...vm,
+      project: {
+        id: project.id,
+        name: project.name,
+        description: project.description
+      }
+    })
   } catch (error) {
     console.error('Error fetching VM:', error)
     return NextResponse.json(
