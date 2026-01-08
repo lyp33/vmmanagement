@@ -7,9 +7,41 @@ import { getCurrentUserForAudit, safeCreateAuditLog } from '@/lib/audit-helper'
 export async function GET() {
   try {
     const projects = await storage.findAllProjects()
+    
+    // Get all VMs to count per project
+    const allVMs = await storage.findAllVMs()
+    
+    // Get all users to count assignments per project
+    const allUsers = await storage.findAllUsers()
+    
+    // Add counts to each project
+    const projectsWithCounts = await Promise.all(
+      projects.map(async (project) => {
+        // Count VMs for this project
+        const vmCount = allVMs.filter(vm => vm.projectId === project.id).length
+        
+        // Count user assignments for this project
+        let userAssignmentCount = 0
+        for (const user of allUsers) {
+          const userProjects = await storage.findUserProjects(user.id)
+          if (userProjects.some(p => p.id === project.id)) {
+            userAssignmentCount++
+          }
+        }
+        
+        return {
+          ...project,
+          _count: {
+            vms: vmCount,
+            userAssignments: userAssignmentCount
+          }
+        }
+      })
+    )
+    
     return NextResponse.json({ 
-      projects,
-      total: projects.length
+      projects: projectsWithCounts,
+      total: projectsWithCounts.length
     })
   } catch (error) {
     console.error('Failed to fetch projects:', error)
