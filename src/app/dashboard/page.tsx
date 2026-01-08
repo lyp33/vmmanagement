@@ -40,7 +40,7 @@ export default function DashboardPage() {
     const fetchDashboardData = async () => {
       try {
         // Fetch VMs
-        const vmsRes = await fetch('/api/vms')
+        const vmsRes = await fetch('/api/vms-simple')
         const vmsData = await vmsRes.json()
         const vms = vmsData.vms || []
         
