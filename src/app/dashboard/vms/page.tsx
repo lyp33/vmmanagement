@@ -538,6 +538,7 @@ export default function VMsPage() {
                       <TableHead>Internal IP</TableHead>
                       <TableHead>Domain</TableHead>
                       <TableHead>Project</TableHead>
+                      <TableHead>Created At</TableHead>
                       <TableHead>Expiry Date</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
@@ -562,6 +563,13 @@ export default function VMsPage() {
                           <TableCell>{vm.vmDomain}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{vm.project.name}</Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600">
+                            {new Date(vm.createdAt).toLocaleDateString('zh-CN', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit'
+                            })}
                           </TableCell>
                           <TableCell>
                             {new Date(vm.currentExpiryDate).toLocaleDateString('zh-CN')}
