@@ -1,5 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { storage } from '@/lib/storage'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+
+// Helper function to get current user for audit logging
+async function getCurrentUserForAudit() {
+  try {
+    const session = await getServerSession(authOptions)
+    if (session?.user?.email) {
+      const user = await storage.findUserByEmail(session.user.email)
+      if (user) {
+        return { userId: user.id, userEmail: user.email }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to get current user for audit:', error)
+  }
+  return { userId: 'system', userEmail: 'system@internal' }
+}
 
 export async function GET(
   request: NextRequest,
@@ -71,6 +89,15 @@ export async function PUT(
     const { id } = await params
     const body = await request.json()
     
+    // Get old project data for audit
+    const oldProject = await storage.findProjectById(id)
+    if (!oldProject) {
+      return NextResponse.json(
+        { error: 'Project not found' },
+        { status: 404 }
+      )
+    }
+    
     const updatedProject = await storage.updateProject(id, {
       name: body.name,
       description: body.description
@@ -82,6 +109,21 @@ export async function PUT(
         { status: 404 }
       )
     }
+
+    // Log audit
+    const auditUser = await getCurrentUserForAudit()
+    const changes: Record<string, any> = {}
+    if (body.name && body.name !== oldProject.name) changes.name = { from: oldProject.name, to: body.name }
+    if (body.description && body.description !== oldProject.description) changes.description = { from: oldProject.description, to: body.description }
+    
+    await storage.createAuditLog({
+      operation: 'UPDATE_PROJECT',
+      entityType: 'Project',
+      entityId: id,
+      userId: auditUser.userId,
+      userEmail: auditUser.userEmail,
+      changes
+    })
 
     return NextResponse.json({ 
       project: updatedProject,
@@ -114,6 +156,15 @@ export async function DELETE(
       )
     }
     
+    // Get project data for audit before deletion
+    const project = await storage.findProjectById(id)
+    if (!project) {
+      return NextResponse.json(
+        { error: 'Project not found' },
+        { status: 404 }
+      )
+    }
+    
     const deleted = await storage.deleteProject(id)
     
     if (!deleted) {
@@ -122,6 +173,22 @@ export async function DELETE(
         { status: 404 }
       )
     }
+
+    // Log audit
+    const auditUser = await getCurrentUserForAudit()
+    await storage.createAuditLog({
+      operation: 'DELETE_PROJECT',
+      entityType: 'Project',
+      entityId: id,
+      userId: auditUser.userId,
+      userEmail: auditUser.userEmail,
+      changes: {
+        deleted: {
+          name: project.name,
+          description: project.description
+        }
+      }
+    })
 
     return NextResponse.json({ 
       message: 'Project deleted successfully'

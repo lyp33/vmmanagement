@@ -1,5 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { storage } from '@/lib/storage'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+
+// Helper function to get current user for audit logging
+async function getCurrentUserForAudit() {
+  try {
+    const session = await getServerSession(authOptions)
+    if (session?.user?.email) {
+      const user = await storage.findUserByEmail(session.user.email)
+      if (user) {
+        return { userId: user.id, userEmail: user.email }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to get current user for audit:', error)
+  }
+  return { userId: 'system', userEmail: 'system@internal' }
+}
 
 export async function GET() {
   try {
@@ -44,6 +62,20 @@ export async function POST(request: NextRequest) {
     const newProject = await storage.createProject({
       name,
       description
+    })
+
+    // Log audit
+    const auditUser = await getCurrentUserForAudit()
+    await storage.createAuditLog({
+      operation: 'CREATE_PROJECT',
+      entityType: 'Project',
+      entityId: newProject.id,
+      userId: auditUser.userId,
+      userEmail: auditUser.userEmail,
+      changes: {
+        name: newProject.name,
+        description: newProject.description
+      }
     })
 
     return NextResponse.json({ 

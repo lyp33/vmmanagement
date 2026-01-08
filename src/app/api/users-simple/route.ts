@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { storage } from '@/lib/storage'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import bcrypt from 'bcryptjs'
+
+// Helper function to get current user for audit logging
+async function getCurrentUserForAudit() {
+  try {
+    const session = await getServerSession(authOptions)
+    if (session?.user?.email) {
+      const user = await storage.findUserByEmail(session.user.email)
+      if (user) {
+        return { userId: user.id, userEmail: user.email }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to get current user for audit:', error)
+  }
+  return { userId: 'system', userEmail: 'system@internal' }
+}
 
 export async function GET() {
   try {
@@ -61,6 +79,21 @@ export async function POST(request: NextRequest) {
       name,
       password: hashedPassword,
       role: role as 'ADMIN' | 'USER'
+    })
+
+    // Log audit
+    const auditUser = await getCurrentUserForAudit()
+    await storage.createAuditLog({
+      operation: 'CREATE_USER',
+      entityType: 'User',
+      entityId: newUser.id,
+      userId: auditUser.userId,
+      userEmail: auditUser.userEmail,
+      changes: {
+        email: newUser.email,
+        name: newUser.name,
+        role: newUser.role
+      }
     })
 
     // Remove password from response

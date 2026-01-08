@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { storage } from '@/lib/storage'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import bcrypt from 'bcryptjs'
+
+// Helper function to get current user for audit logging
+async function getCurrentUserForAudit() {
+  try {
+    const session = await getServerSession(authOptions)
+    if (session?.user?.email) {
+      const user = await storage.findUserByEmail(session.user.email)
+      if (user) {
+        return { userId: user.id, userEmail: user.email }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to get current user for audit:', error)
+  }
+  return { userId: 'system', userEmail: 'system@internal' }
+}
 
 export async function GET(
   request: NextRequest,
@@ -38,6 +56,15 @@ export async function PUT(
     const { id } = await params
     const body = await request.json()
     
+    // Get old user data for audit
+    const oldUser = await storage.findUserById(id)
+    if (!oldUser) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+    
     // If password is being updated, hash it
     if (body.password) {
       body.password = await bcrypt.hash(body.password, 10)
@@ -51,6 +78,23 @@ export async function PUT(
         { status: 404 }
       )
     }
+
+    // Log audit
+    const auditUser = await getCurrentUserForAudit()
+    const changes: Record<string, any> = {}
+    if (body.name && body.name !== oldUser.name) changes.name = { from: oldUser.name, to: body.name }
+    if (body.email && body.email !== oldUser.email) changes.email = { from: oldUser.email, to: body.email }
+    if (body.role && body.role !== oldUser.role) changes.role = { from: oldUser.role, to: body.role }
+    if (body.password) changes.password = 'updated'
+    
+    await storage.createAuditLog({
+      operation: 'UPDATE_USER',
+      entityType: 'User',
+      entityId: id,
+      userId: auditUser.userId,
+      userEmail: auditUser.userEmail,
+      changes
+    })
 
     // Remove password from response
     const { password, ...safeUser } = updatedUser

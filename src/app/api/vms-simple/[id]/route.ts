@@ -1,5 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { storage } from '@/lib/storage'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+
+// Helper function to get current user for audit logging
+async function getCurrentUserForAudit() {
+  try {
+    const session = await getServerSession(authOptions)
+    if (session?.user?.email) {
+      const user = await storage.findUserByEmail(session.user.email)
+      if (user) {
+        return { userId: user.id, userEmail: user.email }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to get current user for audit:', error)
+  }
+  return { userId: 'system', userEmail: 'system@internal' }
+}
 
 // GET /api/vms-simple/[id] - Get VM by ID
 export async function GET(
@@ -102,6 +120,15 @@ export async function PATCH(
     const { id } = await context.params
     const body = await request.json()
 
+    // Get old VM data for audit
+    const oldVM = await storage.findVMById(id)
+    if (!oldVM) {
+      return NextResponse.json(
+        { error: 'VM not found' },
+        { status: 404 }
+      )
+    }
+
     // Update VM with partial data
     const updatedVM = await storage.updateVMRecord(id, body)
 
@@ -111,6 +138,34 @@ export async function PATCH(
         { status: 404 }
       )
     }
+
+    // Log audit
+    const auditUser = await getCurrentUserForAudit()
+    const changes: Record<string, any> = {}
+    
+    // Track all changes
+    for (const [key, value] of Object.entries(body)) {
+      if (value !== oldVM[key as keyof typeof oldVM]) {
+        changes[key] = {
+          from: oldVM[key as keyof typeof oldVM],
+          to: value
+        }
+      }
+    }
+    
+    // Determine operation type (renewal vs regular update)
+    const operation = body.lastExpiryDate && body.currentExpiryDate !== oldVM.currentExpiryDate 
+      ? 'RENEW_VM' 
+      : 'UPDATE_VM'
+    
+    await storage.createAuditLog({
+      operation,
+      entityType: 'VMRecord',
+      entityId: id,
+      userId: auditUser.userId,
+      userEmail: auditUser.userEmail,
+      changes
+    })
 
     return NextResponse.json(updatedVM)
   } catch (error) {
