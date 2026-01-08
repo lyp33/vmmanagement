@@ -5,9 +5,19 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const limitParam = searchParams.get('limit')
+    const entityType = searchParams.get('entityType')
+    const entityId = searchParams.get('entityId')
     const limit = limitParam ? parseInt(limitParam, 10) : 100
 
-    const logs = await storage.findAuditLogs(limit)
+    let logs = await storage.findAuditLogs(limit)
+    
+    // Filter by entityType and entityId if provided
+    if (entityType) {
+      logs = logs.filter(log => log.entityType === entityType)
+    }
+    if (entityId) {
+      logs = logs.filter(log => log.entityId === entityId)
+    }
     
     return NextResponse.json({ 
       logs,
