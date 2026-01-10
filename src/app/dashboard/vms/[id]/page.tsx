@@ -38,6 +38,7 @@ interface VMRecord {
   createdAt: string
   lastExpiryDate?: string
   currentExpiryDate: string
+  comment?: string
   project: {
     id: string
     name: string
@@ -336,6 +337,13 @@ export default function VMDetailPage() {
                     </div>
                   </div>
                 </div>
+                
+                {vm.comment && (
+                  <div className="mt-4 pt-4 border-t">
+                    <p className="text-sm font-medium text-gray-500 mb-1">Comment</p>
+                    <p className="text-sm text-gray-900">{vm.comment}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
