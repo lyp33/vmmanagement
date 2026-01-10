@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { email, vmAccount, vmInternalIP, vmDomain, vmStartDate, projectId, currentExpiryDate } = body
+    const { email, vmAccount, vmInternalIP, vmDomain, vmStartDate, projectId, currentExpiryDate, comment } = body
 
     // Validate required fields
     if (!email || !vmAccount || !vmInternalIP || !vmDomain || !vmStartDate || !projectId || !currentExpiryDate) {
@@ -127,7 +127,8 @@ export async function POST(request: NextRequest) {
       vmStartDate,
       currentExpiryDate,
       projectId,
-      createdBy: currentUser.id
+      createdBy: currentUser.id,
+      comment: comment || undefined
     })
 
     // Log audit

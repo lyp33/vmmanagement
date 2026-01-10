@@ -26,6 +26,7 @@ interface FormData {
   vmStartDate: string
   projectId: string
   currentExpiryDate: string
+  comment: string
 }
 
 interface FormErrors {
@@ -51,7 +52,8 @@ export default function NewVMPage() {
     vmDomain: '',
     vmStartDate: '',
     projectId: '',
-    currentExpiryDate: ''
+    currentExpiryDate: '',
+    comment: ''
   })
   const [formErrors, setFormErrors] = useState<FormErrors>({})
 
@@ -314,6 +316,20 @@ export default function NewVMPage() {
                     Default is set to 3 months from now, you can adjust as needed
                   </p>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="comment">Comment</Label>
+                <Input
+                  id="comment"
+                  value={formData.comment}
+                  onChange={(e) => handleInputChange('comment', e.target.value)}
+                  placeholder="Optional notes or comments about this VM"
+                  disabled={loading}
+                />
+                <p className="text-xs text-gray-500">
+                  Optional field for additional information or notes
+                </p>
               </div>
 
               <div className="flex items-center justify-end space-x-4 pt-6 border-t">

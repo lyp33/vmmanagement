@@ -91,18 +91,8 @@ You should see:
 2. Login with:
    - **Email:** `admin@123.com`
    - **Password:** `123456789`
-3. ⚠️ **IMPORTANT:** Change password immediately!
 
-## 🔧 Post-Deployment Configuration
-
-### Change Admin Password
-
-1. Login to your app
-2. Go to **Users** page
-3. Click on admin user
-4. Update password to a strong, unique password
-
-### Optional: Configure Custom Domain
+ononfiguratiment Cst-Deploy## 🔧 Po
 
 1. Go to Vercel Dashboard → Your Project
 2. Click **"Settings"** → **"Domains"**
@@ -159,13 +149,22 @@ After deployment, verify:
 
 ### Data Disappears
 
-**Expected Behavior:**
-- File-based storage uses `/tmp` directory
-- Data clears on cold starts (Vercel limitation)
+**This is EXPECTED behavior with file storage:**
 
-**Solution:**
-- Export data regularly
-- Consider migrating to PostgreSQL for persistence
+**Your data WILL BE CLEARED when:**
+1. ❌ You redeploy the application
+2. ❌ App is idle for 15-30 minutes (cold start)
+3. ❌ Vercel restarts the server
+
+**Your data WILL PERSIST when:**
+1. ✅ App is actively being used
+2. ✅ You refresh pages or navigate
+3. ✅ Multiple users are using it continuously
+
+**Solutions:**
+- **For testing/demo:** Export data before redeploying
+- **For production:** Migrate to PostgreSQL, MongoDB, or other persistent database
+- **Current setup:** Only suitable for temporary use, demos, or testing
 
 ### 404 Errors
 
@@ -201,20 +200,15 @@ View real-time logs:
 
 ## 🔐 Security Best Practices
 
-1. **Change Default Password**
-   - Do this immediately after first login
-   - Use a strong, unique password
-
-2. **Secure NEXTAUTH_SECRET**
+1. **Secure NEXTAUTH_SECRET**
    - Use a cryptographically secure random string
    - Never commit to version control
-   - Rotate periodically
 
-3. **Enable Security Headers**
+2. **Enable Security Headers**
    - Vercel automatically adds security headers
    - Review in `vercel.json`
 
-4. **Regular Updates**
+3. **Regular Updates**
    - Keep dependencies updated
    - Monitor security advisories
 
@@ -255,11 +249,10 @@ If you encounter issues:
 Your VM Expiry Management System is now live on Vercel! 🎉
 
 **Next Steps:**
-1. Change default admin password
-2. Create your first project
-3. Add VM records
-4. Invite team members
-5. Configure email notifications (optional)
+1. Create your first project
+2. Add VM records
+3. Invite team members
+4. Configure email notifications (optional)
 
 ---
 

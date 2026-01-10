@@ -40,6 +40,7 @@ export interface VMRecord {
   currentExpiryDate: string
   projectId: string
   createdBy: string
+  comment?: string  // 备注信息
   updatedAt: string
 }
 
