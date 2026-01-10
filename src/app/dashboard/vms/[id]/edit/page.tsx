@@ -20,6 +20,7 @@ interface VMRecord {
   vmDomain: string
   vmStartDate: string
   currentExpiryDate: string
+  comment?: string
   project: {
     id: string
     name: string
@@ -39,6 +40,7 @@ interface FormData {
   vmStartDate: string
   projectId: string
   currentExpiryDate: string
+  comment: string
 }
 
 interface FormErrors {
@@ -67,7 +69,8 @@ export default function EditVMPage() {
     vmDomain: '',
     vmStartDate: '',
     projectId: '',
-    currentExpiryDate: ''
+    currentExpiryDate: '',
+    comment: ''
   })
   const [formErrors, setFormErrors] = useState<FormErrors>({})
 
@@ -111,7 +114,8 @@ export default function EditVMPage() {
         vmDomain: vmData.vmDomain,
         vmStartDate: vmData.vmStartDate ? vmData.vmStartDate.split('T')[0] : '', // Convert to YYYY-MM-DD format
         projectId: vmData.project.id,
-        currentExpiryDate: vmData.currentExpiryDate.split('T')[0] // Convert to YYYY-MM-DD format
+        currentExpiryDate: vmData.currentExpiryDate.split('T')[0], // Convert to YYYY-MM-DD format
+        comment: vmData.comment || ''
       })
     } catch (error) {
       console.error('Error fetching VM:', error)
@@ -405,6 +409,20 @@ export default function EditVMPage() {
                     <p className="text-sm text-red-500">{formErrors.currentExpiryDate}</p>
                   )}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="comment">Comment</Label>
+                <Input
+                  id="comment"
+                  value={formData.comment}
+                  onChange={(e) => handleInputChange('comment', e.target.value)}
+                  placeholder="Optional notes or comments about this VM"
+                  disabled={saving}
+                />
+                <p className="text-xs text-gray-500">
+                  Optional field for additional information or notes
+                </p>
               </div>
 
               <div className="flex items-center justify-end space-x-4 pt-6 border-t">

@@ -55,7 +55,7 @@ export async function PUT(
   try {
     const { id } = await context.params
     const body = await request.json()
-    const { email, vmAccount, vmInternalIP, vmDomain, projectId, currentExpiryDate, lastExpiryDate } = body
+    const { email, vmAccount, vmInternalIP, vmDomain, projectId, currentExpiryDate, lastExpiryDate, comment } = body
 
     // Validate project exists if projectId is provided
     if (projectId) {
@@ -76,6 +76,7 @@ export async function PUT(
       vmDomain,
       currentExpiryDate,
       lastExpiryDate,
+      comment: comment || undefined,
       ...(projectId && { projectId })
     })
 
