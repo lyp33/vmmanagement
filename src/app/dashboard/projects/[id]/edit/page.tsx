@@ -64,9 +64,9 @@ export default function EditProjectPage() {
       const response = await fetch(`/api/projects-simple/${projectId}`)
       if (!response.ok) {
         if (response.status === 404) {
-          setError('Project不存在')
+          setError('Project does not exist')
         } else if (response.status === 403) {
-          setError('您No权限Edit此Project')
+          setError('You do not have permission to edit this project')
         } else {
           throw new Error('Failed to fetch project')
         }
@@ -84,7 +84,7 @@ export default function EditProjectPage() {
       })
     } catch (error) {
       console.error('Error fetching project:', error)
-      setError('加载ProjectFailed')
+      setError('Failed to load project')
     } finally {
       setLoading(false)
     }
@@ -94,7 +94,7 @@ export default function EditProjectPage() {
     const errors: FormErrors = {}
 
     if (!formData.name.trim()) {
-      errors.name = 'ProjectName是Required field'
+      errors.name = 'Project Code is required'
     }
 
     setFormErrors(errors)
@@ -138,7 +138,7 @@ export default function EditProjectPage() {
       router.push(`/dashboard/projects/${projectId}`)
     } catch (error: any) {
       console.error('Error updating project:', error)
-      setError(error.message || '更新ProjectFailed')
+      setError(error.message || 'Failed to update project')
     } finally {
       setSaving(false)
     }
@@ -148,8 +148,8 @@ export default function EditProjectPage() {
     if (!project) return
 
     const confirmMessage = project._count.vms > 0 
-      ? `此Project包含 ${project._count.vms} 个VMrecords，无法Delete。请先移除所有VMrecords。`
-      : `确定要DeleteProject "${project.name}" ?此Actions无法撤销。`
+      ? `This project contains ${project._count.vms} VM records and cannot be deleted. Please remove all VM records first.`
+      : `Are you sure you want to delete project "${project.name}"? This action cannot be undone.`
 
     if (project._count.vms > 0) {
       alert(confirmMessage)
@@ -174,7 +174,7 @@ export default function EditProjectPage() {
       router.push('/dashboard/projects')
     } catch (error: any) {
       console.error('Error deleting project:', error)
-      setError(error.message || 'DeleteProjectFailed')
+      setError(error.message || 'Failed to delete project')
     } finally {
       setDeleting(false)
     }
@@ -223,7 +223,7 @@ export default function EditProjectPage() {
             Back
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">EditProject</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Edit Project</h1>
             <p className="mt-2 text-gray-600">
               {project?.name}
             </p>
@@ -243,21 +243,21 @@ export default function EditProjectPage() {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Edit className="w-5 h-5" />
-                  <span>ProjectInformation</span>
+                  <span>Project Information</span>
                 </CardTitle>
                 <CardDescription>
-                  修改Projectof基本Information
+                  Modify basic project information
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="name">ProjectName *</Label>
+                    <Label htmlFor="name">Project Code *</Label>
                     <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
-                      placeholder="输入ProjectName"
+                      placeholder="Enter project code"
                       className={formErrors.name ? "border-red-500" : ""}
                       disabled={saving}
                     />
@@ -267,12 +267,12 @@ export default function EditProjectPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="description">ProjectDescription</Label>
+                    <Label htmlFor="description">Project Description</Label>
                     <Input
                       id="description"
                       value={formData.description}
                       onChange={(e) => handleInputChange('description', e.target.value)}
-                      placeholder="输入ProjectDescription（可选）"
+                      placeholder="Enter project description (optional)"
                       disabled={saving}
                     />
                   </div>
@@ -290,12 +290,12 @@ export default function EditProjectPage() {
                       {saving ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Save中...
+                          Saving...
                         </>
                       ) : (
                         <>
                           <Save className="w-4 h-4 mr-2" />
-                          Save更改
+                          Save Changes
                         </>
                       )}
                     </Button>
@@ -311,7 +311,7 @@ export default function EditProjectPage() {
             {project && (
               <Card>
                 <CardHeader>
-                  <CardTitle>ProjectStatistics</CardTitle>
+                  <CardTitle>Project Statistics</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -320,7 +320,7 @@ export default function EditProjectPage() {
                       <span className="font-medium">{project._count.vms}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">AssignUser</span>
+                      <span className="text-gray-500">Assigned Users</span>
                       <span className="font-medium">{project._count.userAssignments}</span>
                     </div>
                   </div>
@@ -331,9 +331,9 @@ export default function EditProjectPage() {
             {/* Danger Zone */}
             <Card className="border-red-200">
               <CardHeader>
-                <CardTitle className="text-red-600">危险Actions</CardTitle>
+                <CardTitle className="text-red-600">Danger Zone</CardTitle>
                 <CardDescription>
-                  这些Actions无法撤销，请谨慎Actions
+                  These actions cannot be undone. Please proceed with caution.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -346,18 +346,18 @@ export default function EditProjectPage() {
                   {deleting ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Delete中...
+                      Deleting...
                     </>
                   ) : (
                     <>
                       <Trash2 className="w-4 h-4 mr-2" />
-                      DeleteProject
+                      Delete Project
                     </>
                   )}
                 </Button>
                 {project && project._count.vms > 0 && (
                   <p className="text-xs text-red-500 mt-2">
-                    此Project包含VMrecords，无法Delete
+                    This project contains VM records and cannot be deleted
                   </p>
                 )}
               </CardContent>

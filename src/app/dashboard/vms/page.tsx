@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ImportDialog } from "@/components/vms/import-dialog"
 import { 
   Plus, 
   Search, 
@@ -21,10 +22,7 @@ import {
   Trash2, 
   Calendar, 
   Server,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  MoreHorizontal
+  Upload
 } from "lucide-react"
 import Link from "next/link"
 
@@ -64,6 +62,7 @@ export default function VMsPage() {
   })
   const [error, setError] = useState('')
   const [showBatchRenewDialog, setShowBatchRenewDialog] = useState(false)
+  const [showImportDialog, setShowImportDialog] = useState(false)
   const [renewalMonths, setRenewalMonths] = useState(3)
   const [batchRenewing, setBatchRenewing] = useState(false)
 
@@ -487,12 +486,22 @@ export default function VMsPage() {
                   Export JSON
                 </Button>
                 {isAdmin && (
-                  <Link href="/dashboard/vms/new">
-                    <Button size="sm">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create VM
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowImportDialog(true)}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Import CSV
                     </Button>
-                  </Link>
+                    <Link href="/dashboard/vms/new">
+                      <Button size="sm">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create VM
+                      </Button>
+                    </Link>
+                  </>
                 )}
               </div>
             </CardTitle>
@@ -526,14 +535,13 @@ export default function VMsPage() {
                           />
                         </TableHead>
                       )}
-                      <TableHead>Email</TableHead>
                       <TableHead>VM Account</TableHead>
-                      <TableHead>Internal IP</TableHead>
                       <TableHead>Domain</TableHead>
+                      <TableHead>Email</TableHead>
                       <TableHead>Project</TableHead>
                       <TableHead>VM Start Date</TableHead>
-                      <TableHead>Created At</TableHead>
                       <TableHead>Expiry Date</TableHead>
+                      <TableHead className="text-center">Remaining Days</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -551,10 +559,9 @@ export default function VMsPage() {
                               />
                             </TableCell>
                           )}
-                          <TableCell className="font-medium">{vm.email}</TableCell>
                           <TableCell>{vm.vmAccount}</TableCell>
-                          <TableCell>{vm.vmInternalIP}</TableCell>
                           <TableCell>{vm.vmDomain}</TableCell>
+                          <TableCell className="font-medium">{vm.email}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{vm.project.name}</Badge>
                           </TableCell>
@@ -565,23 +572,24 @@ export default function VMsPage() {
                               day: '2-digit'
                             }) : '-'}
                           </TableCell>
-                          <TableCell className="text-sm text-gray-600">
-                            {new Date(vm.createdAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: '2-digit',
-                              day: '2-digit'
-                            })}
-                          </TableCell>
                           <TableCell>
                             {new Date(vm.currentExpiryDate).toLocaleDateString('en-US')}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className={`font-medium ${
+                              expiryInfo.days < 0 
+                                ? 'text-red-600' 
+                                : expiryInfo.days <= 7 
+                                ? 'text-yellow-600' 
+                                : 'text-green-600'
+                            }`}>
+                              {expiryInfo.days < 0 ? `${Math.abs(expiryInfo.days)} (Overdue)` : expiryInfo.days}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
                               <div className={`w-2 h-2 rounded-full ${expiryInfo.color}`}></div>
                               <span className="text-sm">{expiryInfo.label}</span>
-                              <span className="text-xs text-gray-500">
-                                ({expiryInfo.days} days)
-                              </span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -638,6 +646,16 @@ export default function VMsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Import Dialog */}
+      <ImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        onImportComplete={() => {
+          fetchVMs();
+          setShowImportDialog(false);
+        }}
+      />
     </DashboardLayout>
   )
 }

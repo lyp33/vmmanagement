@@ -5,6 +5,7 @@ A modern web application for tracking and managing virtual machine expiry dates,
 ## 🌟 Key Features
 
 - **VM Record Management**: Complete CRUD operations with batch management support
+- **CSV Batch Import**: Upload CSV files to import multiple VM records with validation
 - **Project Management**: Multi-project organization with project-based access control
 - **Automatic Expiry Monitoring**: 7-day advance email reminders with scheduled task automation
 - **User Permission Management**: Admin and regular user roles with project-level access control
@@ -108,6 +109,8 @@ scripts\deploy.bat production
 - [管理员指南](./ADMIN_GUIDE.md) - 系统管理和维护指南
 - [认证设置](./AUTHENTICATION_SETUP.md) - 认证系统配置
 - [审计系统](./AUDIT_SYSTEM.md) - 审计功能说明
+- [VM 批量导入快速开始](./VM_IMPORT_QUICKSTART.md) - 5 分钟快速上手 CSV 导入
+- [VM 批量导入完整指南](./VM_IMPORT_GUIDE.md) - CSV 导入详细文档
 
 ## 🏗️ 技术架构
 
