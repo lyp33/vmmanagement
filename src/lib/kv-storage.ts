@@ -125,6 +125,24 @@ class KVStorage {
     return updatedUser
   }
 
+  async deleteUser(id: string): Promise<boolean> {
+    const user = await this.findUserById(id)
+    if (!user) return false
+
+    // Remove user from KV
+    await kv.del(KEYS.USER_BY_ID(id))
+    await kv.del(KEYS.USER_BY_EMAIL(user.email))
+    await kv.srem(KEYS.USERS, id)
+
+    // Remove user's project assignments
+    const assignments = await this.findUserProjectAssignments(id)
+    for (const assignment of assignments) {
+      await this.removeProjectAssignment(id, assignment.projectId)
+    }
+
+    return true
+  }
+
   async findAllUsers(): Promise<User[]> {
     const userIds = await kv.smembers(KEYS.USERS)
     const users: User[] = []

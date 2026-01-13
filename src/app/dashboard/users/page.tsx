@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AssignProjectDialog } from "@/components/users/assign-project-dialog"
 import { 
   Users, 
   Search, 
@@ -22,7 +23,8 @@ import {
   Calendar,
   FolderOpen,
   Trash2,
-  X
+  X,
+  FolderPlus
 } from "lucide-react"
 
 interface User {
@@ -66,6 +68,8 @@ export default function UsersPage() {
     role: 'USER'
   })
   const [creating, setCreating] = useState(false)
+  const [showAssignDialog, setShowAssignDialog] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; assignedProjectIds: string[] } | null>(null)
 
   const isAdmin = session?.user?.role === 'ADMIN'
 
@@ -463,34 +467,47 @@ export default function UsersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {user.projectAssignments && user.projectAssignments.length > 0 ? (
-                            <div className="space-y-1">
-                              {user.projectAssignments.map((assignment) => (
-                                <div 
-                                  key={assignment.id} 
-                                  className="flex items-center justify-between gap-2 text-sm bg-gray-50 px-2 py-1 rounded"
-                                >
-                                  <span className="flex-1">{assignment.projectName}</span>
-                                  <button
-                                    onClick={() => handleRemoveProjectAssignment(
-                                      assignment.projectId,
-                                      user.id,
-                                      assignment.projectName
-                                    )}
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded p-1"
-                                    title="Remove from project"
+                          <div className="space-y-2">
+                            {user.projectAssignments && user.projectAssignments.length > 0 && (
+                              <div className="space-y-1">
+                                {user.projectAssignments.map((assignment) => (
+                                  <div 
+                                    key={assignment.id} 
+                                    className="flex items-center justify-between gap-2 text-sm bg-gray-50 px-2 py-1 rounded"
                                   >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="flex items-center space-x-1 text-gray-400">
-                              <FolderOpen className="w-4 h-4" />
-                              <span className="text-sm">No projects</span>
-                            </div>
-                          )}
+                                    <span className="flex-1">{assignment.projectName}</span>
+                                    <button
+                                      onClick={() => handleRemoveProjectAssignment(
+                                        assignment.projectId,
+                                        user.id,
+                                        assignment.projectName
+                                      )}
+                                      className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded p-1"
+                                      title="Remove from project"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedUser({
+                                  id: user.id,
+                                  name: user.name,
+                                  assignedProjectIds: user.projectAssignments?.map(a => a.projectId) || []
+                                });
+                                setShowAssignDialog(true);
+                              }}
+                              className="h-7 w-7 p-0"
+                              title="Assign Project"
+                            >
+                              <FolderPlus className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-1 text-sm text-gray-500">
@@ -575,6 +592,21 @@ export default function UsersPage() {
           </Card>
         )}
       </div>
+
+      {/* Assign Project Dialog */}
+      {selectedUser && (
+        <AssignProjectDialog
+          open={showAssignDialog}
+          onOpenChange={setShowAssignDialog}
+          userId={selectedUser.id}
+          userName={selectedUser.name}
+          assignedProjectIds={selectedUser.assignedProjectIds}
+          onAssignComplete={() => {
+            fetchUsers();
+            setShowAssignDialog(false);
+          }}
+        />
+      )}
     </AdminDashboardLayout>
   )
 }

@@ -171,6 +171,23 @@ class FileStorage {
     return data.users[userIndex]
   }
 
+  async deleteUser(id: string): Promise<boolean> {
+    const data = await this.loadData()
+    const userIndex = data.users.findIndex(user => user.id === id)
+    if (userIndex === -1) return false
+
+    // Remove user
+    data.users.splice(userIndex, 1)
+    
+    // Remove user's project assignments
+    data.projectAssignments = data.projectAssignments.filter(
+      assignment => assignment.userId !== id
+    )
+    
+    await this.saveData()
+    return true
+  }
+
   // Project 操作
   async findAllProjects(): Promise<Project[]> {
     const data = await this.loadData()

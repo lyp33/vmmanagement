@@ -8,15 +8,6 @@
       "role": "ADMIN",
       "createdAt": "2026-01-07T15:12:55.424Z",
       "updatedAt": "2026-01-07T15:12:55.424Z"
-    },
-    {
-      "id": "dcacyqbrzbmtxf4k2722d3g0",
-      "email": "testuser@test.com",
-      "name": "Test User",
-      "password": "$2b$10$cVFWkg/0leyzzLKz7lJmtuHcMvV5YeDqCbPXAJQAJ7RiL2vLdlx4C",
-      "role": "USER",
-      "createdAt": "2026-01-07T15:22:26.940Z",
-      "updatedAt": "2026-01-07T15:22:26.940Z"
     }
   ],
   "projects": [
@@ -28,7 +19,14 @@
       "updatedAt": "2026-01-13T16:21:07.926Z"
     }
   ],
-  "projectAssignments": [],
+  "projectAssignments": [
+    {
+      "id": "bs76zv5wip8y57x8z3hkqvnz",
+      "userId": "xippg3be7evgp9jlcijqkaxl",
+      "projectId": "y21wl6tjj7972olo9fx850cl",
+      "assignedAt": "2026-01-13T17:50:45.444Z"
+    }
+  ],
   "vmRecords": [
     {
       "id": "c5ylvtr6r5vqa537wjwv33je",
@@ -201,6 +199,22 @@
       "userEmail": "admin@123.com",
       "changes": {},
       "timestamp": "2026-01-13T16:21:08.042Z"
+    },
+    {
+      "id": "u19tmil7upym4966ouz3dita",
+      "operation": "DELETE_USER",
+      "entityType": "User",
+      "entityId": "dcacyqbrzbmtxf4k2722d3g0",
+      "userId": "xippg3be7evgp9jlcijqkaxl",
+      "userEmail": "admin@123.com",
+      "changes": {
+        "deletedUser": {
+          "email": "testuser@test.com",
+          "name": "Test User",
+          "role": "USER"
+        }
+      },
+      "timestamp": "2026-01-13T17:55:02.918Z"
     }
   ],
   "notificationLogs": []

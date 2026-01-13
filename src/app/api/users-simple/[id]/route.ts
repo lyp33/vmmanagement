@@ -102,7 +102,32 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Only admins can delete users
+    if (session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Only administrators can delete users' },
+        { status: 403 }
+      )
+    }
+
     const { id } = await params
+    
+    // Prevent self-deletion
+    if (id === session.user.id) {
+      return NextResponse.json(
+        { error: 'Cannot delete your own account' },
+        { status: 400 }
+      )
+    }
     
     // Check if user exists
     const user = await storage.findUserById(id)
@@ -113,12 +138,34 @@ export async function DELETE(
       )
     }
 
-    // Note: In KV storage, we need to implement deleteUser method
-    // For now, we'll return an error
-    return NextResponse.json(
-      { error: 'User deletion not yet implemented in storage layer' },
-      { status: 501 }
-    )
+    // Delete user
+    const deleted = await storage.deleteUser(id)
+    
+    if (!deleted) {
+      return NextResponse.json(
+        { error: 'Failed to delete user' },
+        { status: 500 }
+      )
+    }
+
+    // Log audit
+    const auditUser = await getCurrentUserForAudit()
+    await safeCreateAuditLog({
+      operation: 'DELETE_USER',
+      entityType: 'User',
+      entityId: id,
+      userId: auditUser.userId,
+      userEmail: auditUser.userEmail,
+      changes: {
+        deletedUser: {
+          email: user.email,
+          name: user.name,
+          role: user.role
+        }
+      }
+    })
+
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Failed to delete user:', error)
     return NextResponse.json(
