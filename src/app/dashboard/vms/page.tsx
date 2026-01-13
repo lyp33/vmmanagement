@@ -271,6 +271,9 @@ export default function VMsPage() {
       getExpiryStatus(vm.currentExpiryDate).status === filters.expiryStatus
 
     return matchesSearch && matchesProject && matchesExpiryStatus
+  }).sort((a, b) => {
+    // Sort by vmAccount in ascending order (A-Z)
+    return a.vmAccount.localeCompare(b.vmAccount)
   })
 
   return (
