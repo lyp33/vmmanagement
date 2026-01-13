@@ -25,7 +25,7 @@
       "name": "Test Project",
       "description": "Test project for VM management",
       "createdAt": "2026-01-08T02:07:27.125Z",
-      "updatedAt": "2026-01-08T02:07:27.125Z"
+      "updatedAt": "2026-01-13T16:21:07.926Z"
     }
   ],
   "projectAssignments": [],
@@ -43,11 +43,81 @@
       "createdAt": "2026-01-08T06:20:05.053Z",
       "updatedAt": "2026-01-08T15:44:38.465Z",
       "lastExpiryDate": "2027-10-01T00:00:00.000Z"
+    },
+    {
+      "id": "zs6b3g0ifinfzz78eo4bfj1t",
+      "email": "yunpeng.li@example.com",
+      "vmAccount": "stbd.001",
+      "vmInternalIP": "192.168.1.100",
+      "vmDomain": "vm003.example.com",
+      "vmStartDate": "2026-01-13T16:21:24.991Z",
+      "currentExpiryDate": "2026-06-30T00:00:00.000Z",
+      "lastExpiryDate": "2026-03-31T00:00:00.000Z",
+      "projectId": "y21wl6tjj7972olo9fx850cl",
+      "createdBy": "xippg3be7evgp9jlcijqkaxl",
+      "createdAt": "2026-01-13T16:21:24.991Z",
+      "updatedAt": "2026-01-13T16:21:24.991Z"
+    },
+    {
+      "id": "yab5dfecwbiukvgbixcqokgo",
+      "email": "yunpeng.li@example.com",
+      "vmAccount": "stbd.002",
+      "vmInternalIP": "192.168.1.100",
+      "vmDomain": "vm002.example.com",
+      "vmStartDate": "2026-01-13T16:21:25.342Z",
+      "currentExpiryDate": "2026-06-30T00:00:00.000Z",
+      "lastExpiryDate": "2026-03-31T00:00:00.000Z",
+      "projectId": "y21wl6tjj7972olo9fx850cl",
+      "createdBy": "xippg3be7evgp9jlcijqkaxl",
+      "createdAt": "2026-01-13T16:21:25.342Z",
+      "updatedAt": "2026-01-13T16:21:25.342Z"
+    },
+    {
+      "id": "rqorx4ioslapecn95rvq5dws",
+      "email": "yunpeng.li@example.com",
+      "vmAccount": "stbd.003",
+      "vmInternalIP": "192.168.1.100",
+      "vmDomain": "vm006.example.com",
+      "vmStartDate": "2026-01-13T16:27:08.216Z",
+      "currentExpiryDate": "2026-06-30T00:00:00.000Z",
+      "lastExpiryDate": "2026-03-31T00:00:00.000Z",
+      "projectId": "y21wl6tjj7972olo9fx850cl",
+      "createdBy": "xippg3be7evgp9jlcijqkaxl",
+      "createdAt": "2026-01-13T16:27:08.216Z",
+      "updatedAt": "2026-01-13T16:27:08.216Z"
+    },
+    {
+      "id": "qvo06gpqszimwq7fjbm46td9",
+      "email": "yunpeng.li@example.com",
+      "vmAccount": "stbd.004",
+      "vmInternalIP": "192.168.1.100",
+      "vmDomain": "vm007.example.com",
+      "vmStartDate": "2026-01-13T16:27:08.599Z",
+      "currentExpiryDate": "2026-06-30T00:00:00.000Z",
+      "lastExpiryDate": "2026-03-31T00:00:00.000Z",
+      "projectId": "y21wl6tjj7972olo9fx850cl",
+      "createdBy": "xippg3be7evgp9jlcijqkaxl",
+      "createdAt": "2026-01-13T16:27:08.599Z",
+      "updatedAt": "2026-01-13T16:27:08.599Z"
+    },
+    {
+      "id": "sa7vgerfyszej30bfadjop4x",
+      "email": "yunpeng.li@example.com",
+      "vmAccount": "stbd.005",
+      "vmInternalIP": "192.168.1.100",
+      "vmDomain": "vm008.example.com",
+      "vmStartDate": "2026-01-13T16:27:08.874Z",
+      "currentExpiryDate": "2026-06-30T00:00:00.000Z",
+      "lastExpiryDate": "2026-03-31T00:00:00.000Z",
+      "projectId": "y21wl6tjj7972olo9fx850cl",
+      "createdBy": "xippg3be7evgp9jlcijqkaxl",
+      "createdAt": "2026-01-13T16:27:08.875Z",
+      "updatedAt": "2026-01-13T16:27:08.875Z"
     }
   ],
   "auditLogs": [
     {
-      "id": "sdx8i9c4dwhry9ejwljr05sj",
+      "id": "b207rpu5p8h0w0ely3estuh8",
       "operation": "RENEW_VM",
       "entityType": "VMRecord",
       "entityId": "c5ylvtr6r5vqa537wjwv33je",
@@ -55,34 +125,15 @@
       "userEmail": "admin@123.com",
       "changes": {
         "lastExpiryDate": {
-          "from": "2026-07-08",
-          "to": "2026-12-31T00:00:00.000Z"
+          "from": "2027-07-01T00:00:00.000Z",
+          "to": "2027-10-01T00:00:00.000Z"
         },
         "currentExpiryDate": {
-          "from": "2026-12-31T00:00:00.000Z",
-          "to": "2027-03-31T00:00:00.000Z"
+          "from": "2027-10-01T00:00:00.000Z",
+          "to": "2028-01-01T00:00:00.000Z"
         }
       },
-      "timestamp": "2026-01-08T15:25:39.352Z"
-    },
-    {
-      "id": "ek3466icrvdr3nolnuxt8qp4",
-      "operation": "RENEW_VM",
-      "entityType": "VMRecord",
-      "entityId": "c5ylvtr6r5vqa537wjwv33je",
-      "userId": "xippg3be7evgp9jlcijqkaxl",
-      "userEmail": "admin@123.com",
-      "changes": {
-        "lastExpiryDate": {
-          "from": "2026-12-31T00:00:00.000Z",
-          "to": "2027-03-31T00:00:00.000Z"
-        },
-        "currentExpiryDate": {
-          "from": "2027-03-31T00:00:00.000Z",
-          "to": "2027-07-01T00:00:00.000Z"
-        }
-      },
-      "timestamp": "2026-01-08T15:26:38.655Z"
+      "timestamp": "2026-01-08T15:44:38.511Z"
     },
     {
       "id": "vkf8naqu3ti6a3pc6g512luy",
@@ -104,7 +155,7 @@
       "timestamp": "2026-01-08T15:41:57.573Z"
     },
     {
-      "id": "b207rpu5p8h0w0ely3estuh8",
+      "id": "ek3466icrvdr3nolnuxt8qp4",
       "operation": "RENEW_VM",
       "entityType": "VMRecord",
       "entityId": "c5ylvtr6r5vqa537wjwv33je",
@@ -112,15 +163,44 @@
       "userEmail": "admin@123.com",
       "changes": {
         "lastExpiryDate": {
-          "from": "2027-07-01T00:00:00.000Z",
-          "to": "2027-10-01T00:00:00.000Z"
+          "from": "2026-12-31T00:00:00.000Z",
+          "to": "2027-03-31T00:00:00.000Z"
         },
         "currentExpiryDate": {
-          "from": "2027-10-01T00:00:00.000Z",
-          "to": "2028-01-01T00:00:00.000Z"
+          "from": "2027-03-31T00:00:00.000Z",
+          "to": "2027-07-01T00:00:00.000Z"
         }
       },
-      "timestamp": "2026-01-08T15:44:38.511Z"
+      "timestamp": "2026-01-08T15:26:38.655Z"
+    },
+    {
+      "id": "sdx8i9c4dwhry9ejwljr05sj",
+      "operation": "RENEW_VM",
+      "entityType": "VMRecord",
+      "entityId": "c5ylvtr6r5vqa537wjwv33je",
+      "userId": "xippg3be7evgp9jlcijqkaxl",
+      "userEmail": "admin@123.com",
+      "changes": {
+        "lastExpiryDate": {
+          "from": "2026-07-08",
+          "to": "2026-12-31T00:00:00.000Z"
+        },
+        "currentExpiryDate": {
+          "from": "2026-12-31T00:00:00.000Z",
+          "to": "2027-03-31T00:00:00.000Z"
+        }
+      },
+      "timestamp": "2026-01-08T15:25:39.352Z"
+    },
+    {
+      "id": "c1e0pbuamh18kq6bei399n99",
+      "operation": "UPDATE_PROJECT",
+      "entityType": "Project",
+      "entityId": "y21wl6tjj7972olo9fx850cl",
+      "userId": "xippg3be7evgp9jlcijqkaxl",
+      "userEmail": "admin@123.com",
+      "changes": {},
+      "timestamp": "2026-01-13T16:21:08.042Z"
     }
   ],
   "notificationLogs": []

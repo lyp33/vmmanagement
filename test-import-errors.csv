@@ -1,0 +1,5 @@
+email,vmAccount,vmInternalIP,vmDomain,currentExpiryDate,projectCode,lastExpiryDate
+invalid-email,error-vm-001,192.168.1.256,vm,6/30/2026,NonExistentProject,
+user@example.com,error-vm-002,192.168.1.100,error-vm-002.local,7/15/2026,Test Project,
+,error-vm-003,192.168.1.101,error-vm-003.local,8/20/2026,Test Project,
+test@example.com,error-vm-004,not-an-ip,error-vm-004.local,9/30/2026,Test Project,
