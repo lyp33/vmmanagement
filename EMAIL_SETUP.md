@@ -1,55 +1,83 @@
 # Email Configuration Guide
 
-This guide explains how to configure email notifications using Resend.
+This guide explains how to configure email notifications using a custom RESTful API.
 
 ## Quick Setup
 
-### 1. Get Resend API Key
-
-1. Sign up at [Resend](https://resend.com)
-2. Go to [API Keys](https://resend.com/api-keys)
-3. Create a new API key
-4. Copy the API key
-
-### 2. Configure Environment Variables
+### 1. Configure Environment Variables
 
 Add these to your `.env.local` file:
 
 ```env
-# Resend API Key (required)
-RESEND_API_KEY="re_xxxxxxxxxxxxx"
+# Email API endpoint URL (required)
+EMAIL_API_URL="https://portal.insuremo.com/api/mo-fo/1.0/sns/email/send"
 
-# From Email Address (required)
-FROM_EMAIL="onboarding@resend.dev"
+# Email account name - sender account (required)
+EMAIL_ACCOUNT_NAME="insuremo-ptdev@insuremo.com"
+
+# Email API authentication token (required if your API requires authentication)
+EMAIL_API_TOKEN="your-api-token-here"
 ```
 
-### 3. Email Domain Options
+**Note:** If your email API doesn't require authentication, you can omit the `EMAIL_API_TOKEN` variable.
 
-#### Option A: Use Resend Test Domain (Quick Testing)
+### 2. API Specification
 
-For testing purposes, you can use Resend's test domain:
+The system sends emails via POST request to the configured API endpoint.
 
-```env
-FROM_EMAIL="onboarding@resend.dev"
+**Request Format:**
+```json
+{
+  "account_name": "insuremo-ptdev@insuremo.com",
+  "to": ["recipient@example.com"],
+  "subject": "Email Subject",
+  "content": "Email content in plain text"
+}
 ```
 
-**Note:** Test domain has limitations:
-- Can only send to verified email addresses in your Resend account
-- Not suitable for production use
+**Expected Response (Success):**
+```json
+{
+  "code": "i_common_success",
+  "message": "request success",
+  "trace_id": "426256af99e598e0f995c13fc3753093",
+  "env_name": "imo_kic_insuremo_ptdev",
+  "date": "2026-01-17T10:56:18.835Z",
+  "data": {
+    "message_id": "4b59adbd-09e6-45c4-966d-a3aad08eaa71",
+    "content_length": 391
+  }
+}
+```
 
-#### Option B: Use Your Own Domain (Production)
+### 3. Authentication Headers
 
-For production, verify your own domain:
+If your email API requires authentication, the system automatically adds an `Authorization` header when `EMAIL_API_TOKEN` is configured:
 
-1. Go to [Resend Domains](https://resend.com/domains)
-2. Click "Add Domain"
-3. Enter your domain (e.g., `yourdomain.com`)
-4. Add the DNS records provided by Resend to your domain
-5. Wait for verification (usually takes a few minutes)
-6. Update your `.env.local`:
+```
+Authorization: Bearer your-api-token-here
+```
 
-```env
-FROM_EMAIL="noreply@yourdomain.com"
+The token is read from the `EMAIL_API_TOKEN` environment variable. If the variable is not set, the Authorization header will not be included in the request.
+
+**To configure:**
+
+1. Add to your `.env.local`:
+   ```env
+   EMAIL_API_TOKEN="your-api-token-here"
+   ```
+
+2. Restart your development server
+
+**Request Headers (with token):**
+```
+Content-Type: application/json
+Authorization: Bearer your-api-token-here
+```
+
+**Request Headers (without token):**
+```
+Content-Type: application/json
 ```
 
 ## Testing Email Configuration
@@ -70,60 +98,7 @@ curl -X POST http://localhost:3000/api/notifications/test \
   -d '{"testEmail": "your-email@example.com"}'
 ```
 
-## Common Issues
-
-### Issue 1: "Domain not verified" Error (403)
-
-**Problem:** The `FROM_EMAIL` domain is not verified in Resend.
-
-**Solution:**
-- Use `onboarding@resend.dev` for testing
-- Or verify your own domain in Resend dashboard
-
-### Issue 2: "RESEND_API_KEY not configured"
-
-**Problem:** API key is missing or incorrect.
-
-**Solution:**
-- Check that `RESEND_API_KEY` is set in `.env.local`
-- Verify the API key is correct (starts with `re_`)
-- Restart your development server after adding the key
-
-### Issue 3: Email not received
-
-**Problem:** Email sent successfully but not received.
-
-**Possible causes:**
-1. Using test domain (`onboarding@resend.dev`) without verifying recipient email in Resend
-2. Email in spam folder
-3. Invalid recipient email address
-
-**Solution:**
-- Check spam/junk folder
-- If using test domain, verify recipient email in Resend dashboard
-- Use your own verified domain for production
-
-## Environment Variables Reference
-
-| Variable | Required | Description | Example |
-|----------|----------|-------------|---------|
-| `RESEND_API_KEY` | Yes | Your Resend API key | `re_xxxxxxxxxxxxx` |
-| `FROM_EMAIL` | Yes | Sender email address (must be verified) | `noreply@yourdomain.com` |
-
-## Production Deployment
-
-When deploying to Vercel:
-
-1. Add environment variables in Vercel dashboard:
-   - Go to Project Settings → Environment Variables
-   - Add `RESEND_API_KEY`
-   - Add `FROM_EMAIL`
-
-2. Redeploy your application
-
-3. Test email functionality in production
-
-## Email Templates
+## Email Types
 
 The system sends two types of emails:
 
@@ -132,10 +107,141 @@ The system sends two types of emails:
 - Contains VM details and expiry date
 - Sent to the email associated with the VM
 
+**Example Content:**
+```
+VM EXPIRY ALERT
+
+⚠️ Action Required: Your VM will expire in 7 days. Please take necessary action to renew or backup your data.
+
+VM Details:
+- Project: Test Project
+- VM Account: vm-account-001
+- VM Domain: vm001.example.com
+- Internal IP: 192.168.1.100
+- Expiry Date: January 24, 2026, 10:00 AM PST
+
+Please contact your system administrator if you need to:
+- Extend the VM expiry date
+- Backup important data before expiry
+- Transfer resources to another VM
+```
+
 ### 2. Batch Expiry Notification
 - Sent to users with multiple expiring VMs
 - Groups VMs by project
 - Admins receive notifications for all projects
+
+**Example Content:**
+```
+VM EXPIRY ALERT
+
+Hello,
+
+⚠️ Action Required: 5 VM(s) will expire in 7 days. Please review and take necessary action.
+
+SUMMARY:
+- Total VMs expiring: 5
+- Projects affected: 2
+- Expiry date: 7 days from now
+
+PROJECT: Project A
+3 VM(s) expiring in this project:
+  - vm-001 | vm001.example.com | 192.168.1.100 | user@example.com | Expires: Jan 24, 2026
+  - vm-002 | vm002.example.com | 192.168.1.101 | user@example.com | Expires: Jan 24, 2026
+  - vm-003 | vm003.example.com | 192.168.1.102 | user@example.com | Expires: Jan 24, 2026
+```
+
+## Common Issues
+
+### Issue 1: "Email API not configured" Error
+
+**Problem:** Environment variables are missing.
+
+**Solution:**
+- Check that `EMAIL_API_URL` is set in `.env.local`
+- Check that `EMAIL_ACCOUNT_NAME` is set in `.env.local`
+- Restart your development server after adding the variables
+
+### Issue 2: API Returns Error
+
+**Problem:** The email API returns an error response.
+
+**Possible causes:**
+1. Invalid API endpoint URL
+2. Invalid account name
+3. Missing or incorrect authentication headers
+4. Network connectivity issues
+
+**Solution:**
+- Verify the API endpoint URL is correct
+- Check the account name is valid
+- Review API logs for detailed error messages
+- Test the API endpoint directly using curl or Postman
+
+### Issue 3: Email Sent but Not Received
+
+**Problem:** API returns success but email not received.
+
+**Possible causes:**
+1. Email in spam folder
+2. Invalid recipient email address
+3. Email service configuration issues
+
+**Solution:**
+- Check spam/junk folder
+- Verify recipient email address is correct
+- Contact your email service administrator
+
+## Environment Variables Reference
+
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `EMAIL_API_URL` | Yes | Email API endpoint URL | `https://portal.insuremo.com/api/mo-fo/1.0/sns/email/send` |
+| `EMAIL_ACCOUNT_NAME` | Yes | Sender email account | `insuremo-ptdev@insuremo.com` |
+| `EMAIL_API_TOKEN` | Conditional | API authentication token (required if API needs auth) | `your-api-token` |
+
+## Production Deployment
+
+When deploying to Vercel:
+
+1. Add environment variables in Vercel dashboard:
+   - Go to Project Settings → Environment Variables
+   - Add `EMAIL_API_URL`
+   - Add `EMAIL_ACCOUNT_NAME`
+   - Add `EMAIL_API_TOKEN` (if your API requires authentication)
+
+2. Redeploy your application
+
+3. Test email functionality in production
+
+## API Integration Details
+
+### Request Headers
+
+Headers sent with each request:
+
+**Always included:**
+```
+Content-Type: application/json
+```
+
+**Conditionally included (when EMAIL_API_TOKEN is set):**
+```
+Authorization: Bearer {EMAIL_API_TOKEN}
+```
+
+### Error Handling
+
+The system checks for:
+- HTTP status codes (expects 200 OK)
+- Response code field (expects "i_common_success")
+- Network errors and timeouts
+
+All errors are logged to the console and returned to the caller.
+
+### Retry Logic
+
+Currently, the system does not implement automatic retries. Failed emails are logged and can be reviewed in the notification logs.
 
 ## Troubleshooting
 
@@ -148,23 +254,57 @@ Check server logs for email sending details:
 npm run dev
 
 # Check logs for:
-# - "Email sending skipped: RESEND_API_KEY not configured"
-# - Resend API errors
+# - "Sending email via API: ..."
+# - "Email sent successfully: ..."
+# - "Email API error: ..."
 ```
 
 ### Verify Configuration
 
 ```bash
 # Check if environment variables are loaded
-node -e "console.log(process.env.RESEND_API_KEY ? 'API Key: Set' : 'API Key: Not Set')"
-node -e "console.log('From Email:', process.env.FROM_EMAIL)"
+node -e "console.log(process.env.EMAIL_API_URL ? 'API URL: Set' : 'API URL: Not Set')"
+node -e "console.log('Account Name:', process.env.EMAIL_ACCOUNT_NAME)"
+node -e "console.log(process.env.EMAIL_API_TOKEN ? 'API Token: Set' : 'API Token: Not Set')"
 ```
 
-## Support
+### Test API Directly
 
-- [Resend Documentation](https://resend.com/docs)
-- [Resend API Reference](https://resend.com/docs/api-reference)
-- [Resend Support](https://resend.com/support)
+Use curl to test the email API:
+
+```bash
+curl -X POST https://portal.insuremo.com/api/mo-fo/1.0/sns/email/send \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-token-here" \
+  -d '{
+    "account_name": "insuremo-ptdev@insuremo.com",
+    "to": ["your-email@example.com"],
+    "subject": "Test Email",
+    "content": "This is a test email"
+  }'
+```
+
+**Note:** Remove the `Authorization` header if your API doesn't require authentication.
+
+## Migration from Resend
+
+If you're migrating from Resend:
+
+1. Remove old environment variables:
+   - `RESEND_API_KEY`
+   - `FROM_EMAIL`
+
+2. Add new environment variables:
+   - `EMAIL_API_URL`
+   - `EMAIL_ACCOUNT_NAME`
+   - `EMAIL_API_TOKEN` (if needed)
+
+3. Uninstall Resend package:
+   ```bash
+   npm uninstall resend
+   ```
+
+4. Restart your development server
 
 ---
 

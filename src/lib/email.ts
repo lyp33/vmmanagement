@@ -1,27 +1,4 @@
-import { Resend } from 'resend';
-
-// Lazy initialize Resend only when needed
-let resend: Resend | null = null;
-
-function getResend(): Resend {
-  if (!resend) {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      console.warn('RESEND_API_KEY not configured. Email notifications will be disabled.');
-      // Return a mock Resend that doesn't actually send emails
-      return {
-        emails: {
-          send: async () => {
-            console.log('Email sending skipped: RESEND_API_KEY not configured');
-            return { id: 'mock-email-id' };
-          }
-        }
-      } as any;
-    }
-    resend = new Resend(apiKey);
-  }
-  return resend;
-}
+// Email service using custom RESTful API
 
 export interface VMExpiryEmailData {
   vmAccount: string;
@@ -52,6 +29,56 @@ export interface BatchExpiryEmailData {
   projectGroups: ProjectVMGroup[];
 }
 
+// Email API configuration
+interface EmailAPIConfig {
+  url: string;
+  accountName: string;
+  headers?: Record<string, string>;
+}
+
+function getEmailAPIConfig(): EmailAPIConfig {
+  const url = process.env.EMAIL_API_URL;
+  const accountName = process.env.EMAIL_ACCOUNT_NAME;
+  const apiToken = process.env.EMAIL_API_TOKEN;
+
+  if (!url || !accountName) {
+    console.warn('Email API not configured. EMAIL_API_URL and EMAIL_ACCOUNT_NAME are required.');
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  // Add Authorization header if token is provided
+  if (apiToken) {
+    headers['Authorization'] = `Bearer ${apiToken}`;
+  }
+
+  return {
+    url: url || '',
+    accountName: accountName || '',
+    headers
+  };
+}
+
+// Email API request/response types
+interface EmailAPIRequest {
+  account_name: string;
+  to: string[];
+  subject: string;
+  content: string;
+}
+
+interface EmailAPIResponse {
+  code: string;
+  message: string;
+  trace_id?: string;
+  data?: {
+    message_id?: string;
+    content_length?: number;
+  };
+}
+
 export class EmailService {
   private static instance: EmailService;
 
@@ -65,41 +92,76 @@ export class EmailService {
   }
 
   /**
-   * Get the from email address from environment variable
+   * Send email via custom RESTful API
    */
-  private getFromEmail(): string {
-    const fromEmail = process.env.FROM_EMAIL || 'noreply@yourdomain.com';
-    return `VM Expiry Management <${fromEmail}>`;
-  }
+  private async sendEmailViaAPI(
+    to: string[],
+    subject: string,
+    content: string
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    const config = getEmailAPIConfig();
 
-  /**
-   * Send VM expiry notification email
-   */
-  async sendExpiryNotification(data: VMExpiryEmailData): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    if (!config.url || !config.accountName) {
+      return {
+        success: false,
+        error: 'Email API not configured. Please set EMAIL_API_URL and EMAIL_ACCOUNT_NAME environment variables.'
+      };
+    }
+
     try {
-      const emailHtml = this.generateExpiryEmailTemplate(data);
-      const emailText = this.generateExpiryEmailText(data);
+      const requestBody: EmailAPIRequest = {
+        account_name: config.accountName,
+        to,
+        subject,
+        content
+      };
 
-      const result = await getResend().emails.send({
-        from: this.getFromEmail(),
-        to: [data.recipientEmail],
-        subject: `VM Expiry Alert: ${data.vmAccount} expires in 7 days`,
-        html: emailHtml,
-        text: emailText,
+      console.log('Sending email via API:', {
+        url: config.url,
+        to,
+        subject
       });
 
-      if (result.error) {
+      const response = await fetch(config.url, {
+        method: 'POST',
+        headers: config.headers,
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Email API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
         return {
           success: false,
-          error: result.error.message || 'Unknown email sending error'
+          error: `Email API returned ${response.status}: ${response.statusText}`
         };
       }
 
-      return {
-        success: true,
-        messageId: result.data?.id
-      };
+      const result: EmailAPIResponse = await response.json();
+
+      // Check if the API returned success
+      if (result.code === 'i_common_success') {
+        console.log('Email sent successfully:', {
+          messageId: result.data?.message_id,
+          traceId: result.trace_id
+        });
+        return {
+          success: true,
+          messageId: result.data?.message_id
+        };
+      } else {
+        console.error('Email API returned error:', result);
+        return {
+          success: false,
+          error: result.message || 'Unknown error from email API'
+        };
+      }
     } catch (error) {
+      console.error('Error calling email API:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -108,117 +170,24 @@ export class EmailService {
   }
 
   /**
-   * Generate HTML email template for VM expiry notification
+   * Send VM expiry notification email
    */
-  private generateExpiryEmailTemplate(data: VMExpiryEmailData): string {
-    const formattedDate = data.currentExpiryDate.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZoneName: 'short'
-    });
+  async sendExpiryNotification(data: VMExpiryEmailData): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      const emailText = this.generateExpiryEmailText(data);
+      const subject = `VM Expiry Alert: ${data.vmAccount} expires in 7 days`;
 
-    return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VM Expiry Alert</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .header {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        .alert {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .vm-details {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-        .vm-details h3 {
-            margin-top: 0;
-            color: #495057;
-        }
-        .detail-row {
-            margin: 8px 0;
-        }
-        .label {
-            font-weight: bold;
-            color: #495057;
-        }
-        .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #dee2e6;
-            font-size: 14px;
-            color: #6c757d;
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>🚨 VM Expiry Alert</h1>
-        <p>This is an automated notification from the VM Expiry Management System.</p>
-    </div>
-
-    <div class="alert">
-        <strong>⚠️ Action Required:</strong> Your VM will expire in 7 days. Please take necessary action to renew or backup your data.
-    </div>
-
-    <div class="vm-details">
-        <h3>VM Details</h3>
-        <div class="detail-row">
-            <span class="label">Project:</span> ${data.projectName}
-        </div>
-        <div class="detail-row">
-            <span class="label">VM Account:</span> ${data.vmAccount}
-        </div>
-        <div class="detail-row">
-            <span class="label">VM Domain:</span> ${data.vmDomain}
-        </div>
-        <div class="detail-row">
-            <span class="label">Internal IP:</span> ${data.vmInternalIP}
-        </div>
-        <div class="detail-row">
-            <span class="label">Expiry Date:</span> <strong>${formattedDate}</strong>
-        </div>
-    </div>
-
-    <p>Please contact your system administrator if you need to:</p>
-    <ul>
-        <li>Extend the VM expiry date</li>
-        <li>Backup important data before expiry</li>
-        <li>Transfer resources to another VM</li>
-    </ul>
-
-    <div class="footer">
-        <p>This is an automated message from the VM Expiry Management System. Please do not reply to this email.</p>
-        <p>If you believe this notification was sent in error, please contact your system administrator.</p>
-    </div>
-</body>
-</html>
-    `.trim();
+      return await this.sendEmailViaAPI(
+        [data.recipientEmail],
+        subject,
+        emailText
+      );
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
   }
 
   /**
@@ -234,8 +203,7 @@ export class EmailService {
       timeZoneName: 'short'
     });
 
-    return `
-VM EXPIRY ALERT
+    return `VM EXPIRY ALERT
 
 ⚠️ Action Required: Your VM will expire in 7 days. Please take necessary action to renew or backup your data.
 
@@ -252,8 +220,7 @@ Please contact your system administrator if you need to:
 - Transfer resources to another VM
 
 This is an automated message from the VM Expiry Management System. Please do not reply to this email.
-If you believe this notification was sent in error, please contact your system administrator.
-    `.trim();
+If you believe this notification was sent in error, please contact your system administrator.`;
   }
 
   /**
@@ -266,217 +233,19 @@ If you believe this notification was sent in error, please contact your system a
         ? `VM Expiry Alert: ${totalVMs} VMs expiring in 7 days (All Projects)`
         : `VM Expiry Alert: ${totalVMs} VMs expiring in 7 days`;
 
-      const emailHtml = this.generateBatchExpiryEmailTemplate(data);
       const emailText = this.generateBatchExpiryEmailText(data);
 
-      const result = await getResend().emails.send({
-        from: this.getFromEmail(),
-        to: [data.recipientEmail],
+      return await this.sendEmailViaAPI(
+        [data.recipientEmail],
         subject,
-        html: emailHtml,
-        text: emailText,
-      });
-
-      if (result.error) {
-        return {
-          success: false,
-          error: result.error.message || 'Unknown email sending error'
-        };
-      }
-
-      return {
-        success: true,
-        messageId: result.data?.id
-      };
+        emailText
+      );
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
-  }
-
-  /**
-   * Generate HTML email template for batch VM expiry notification
-   */
-  private generateBatchExpiryEmailTemplate(data: BatchExpiryEmailData): string {
-    const totalVMs = data.projectGroups.reduce((sum, group) => sum + group.vms.length, 0);
-    const greeting = data.recipientName ? `Hello ${data.recipientName}` : 'Hello';
-    const roleNote = data.isAdmin 
-      ? '<p><strong>Note:</strong> As an administrator, you are receiving the complete list of all expiring VMs across all projects.</p>'
-      : '<p>You are receiving this notification because you are assigned to the following project(s).</p>';
-
-    const projectSections = data.projectGroups.map(group => `
-      <div class="project-section">
-        <h3>📁 ${group.projectName}</h3>
-        <p><strong>${group.vms.length}</strong> VM(s) expiring in this project:</p>
-        <table class="vm-table">
-          <thead>
-            <tr>
-              <th>VM Account</th>
-              <th>Domain</th>
-              <th>Internal IP</th>
-              <th>Contact Email</th>
-              <th>Expiry Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${group.vms.map(vm => `
-              <tr>
-                <td>${vm.vmAccount}</td>
-                <td>${vm.vmDomain}</td>
-                <td>${vm.vmInternalIP}</td>
-                <td>${vm.email}</td>
-                <td>${vm.currentExpiryDate.toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `).join('');
-
-    return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VM Expiry Alert</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .header {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        .alert {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .summary {
-            background-color: #e7f3ff;
-            border-left: 4px solid #2196F3;
-            padding: 15px;
-            margin: 20px 0;
-        }
-        .project-section {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-        .project-section h3 {
-            margin-top: 0;
-            color: #495057;
-            border-bottom: 2px solid #dee2e6;
-            padding-bottom: 10px;
-        }
-        .vm-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            background-color: white;
-        }
-        .vm-table th {
-            background-color: #495057;
-            color: white;
-            padding: 12px;
-            text-align: left;
-            font-weight: bold;
-        }
-        .vm-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .vm-table tbody tr:hover {
-            background-color: #f8f9fa;
-        }
-        .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #dee2e6;
-            font-size: 14px;
-            color: #6c757d;
-        }
-        .action-items {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-        .action-items ul {
-            margin: 10px 0;
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>🚨 VM Expiry Alert</h1>
-        <p>${greeting},</p>
-        <p>This is an automated notification from the VM Expiry Management System.</p>
-    </div>
-
-    <div class="alert">
-        <strong>⚠️ Action Required:</strong> ${totalVMs} VM(s) will expire in 7 days. Please review and take necessary action.
-    </div>
-
-    <div class="summary">
-        <strong>Summary:</strong>
-        <ul>
-            <li>Total VMs expiring: <strong>${totalVMs}</strong></li>
-            <li>Projects affected: <strong>${data.projectGroups.length}</strong></li>
-            <li>Expiry date: <strong>7 days from now</strong></li>
-        </ul>
-    </div>
-
-    ${roleNote}
-
-    ${projectSections}
-
-    <div class="action-items">
-        <h3>📋 Recommended Actions</h3>
-        <p>Please contact your system administrator if you need to:</p>
-        <ul>
-            <li>Extend the VM expiry date</li>
-            <li>Backup important data before expiry</li>
-            <li>Transfer resources to another VM</li>
-            <li>Decommission VMs that are no longer needed</li>
-        </ul>
-    </div>
-
-    <div class="footer">
-        <p>This is an automated message from the VM Expiry Management System. Please do not reply to this email.</p>
-        <p>If you believe this notification was sent in error, please contact your system administrator.</p>
-        <p><small>Notification sent at: ${new Date().toLocaleString('en-US', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric', 
-          hour: '2-digit', 
-          minute: '2-digit',
-          timeZoneName: 'short'
-        })}</small></p>
-    </div>
-</body>
-</html>
-    `.trim();
   }
 
   /**
@@ -507,8 +276,7 @@ ${vmList}
 `;
     }).join('\n---\n');
 
-    return `
-VM EXPIRY ALERT
+    return `VM EXPIRY ALERT
 
 ${greeting},
 
@@ -541,8 +309,7 @@ Notification sent at: ${new Date().toLocaleString('en-US', {
   hour: '2-digit', 
   minute: '2-digit',
   timeZoneName: 'short'
-})}
-    `.trim();
+})}`;
   }
 
   /**
@@ -550,22 +317,21 @@ Notification sent at: ${new Date().toLocaleString('en-US', {
    */
   async testEmailConfiguration(): Promise<{ success: boolean; error?: string }> {
     try {
-      // Test with a simple email
-      const result = await getResend().emails.send({
-        from: this.getFromEmail(),
-        to: ['test@example.com'],
-        subject: 'Email Configuration Test',
-        text: 'This is a test email to verify email configuration.',
-      });
-
-      if (result.error) {
+      const config = getEmailAPIConfig();
+      
+      if (!config.url || !config.accountName) {
         return {
           success: false,
-          error: result.error.message || 'Email configuration test failed'
+          error: 'Email API not configured. Please set EMAIL_API_URL and EMAIL_ACCOUNT_NAME environment variables.'
         };
       }
 
-      return { success: true };
+      // Test with a simple email
+      return await this.sendEmailViaAPI(
+        ['test@example.com'],
+        'Email Configuration Test',
+        'This is a test email to verify email configuration.'
+      );
     } catch (error) {
       return {
         success: false,
