@@ -65,6 +65,14 @@ export class EmailService {
   }
 
   /**
+   * Get the from email address from environment variable
+   */
+  private getFromEmail(): string {
+    const fromEmail = process.env.FROM_EMAIL || 'noreply@yourdomain.com';
+    return `VM Expiry Management <${fromEmail}>`;
+  }
+
+  /**
    * Send VM expiry notification email
    */
   async sendExpiryNotification(data: VMExpiryEmailData): Promise<{ success: boolean; messageId?: string; error?: string }> {
@@ -73,7 +81,7 @@ export class EmailService {
       const emailText = this.generateExpiryEmailText(data);
 
       const result = await getResend().emails.send({
-        from: 'VM Expiry Management <noreply@yourdomain.com>',
+        from: this.getFromEmail(),
         to: [data.recipientEmail],
         subject: `VM Expiry Alert: ${data.vmAccount} expires in 7 days`,
         html: emailHtml,
@@ -262,7 +270,7 @@ If you believe this notification was sent in error, please contact your system a
       const emailText = this.generateBatchExpiryEmailText(data);
 
       const result = await getResend().emails.send({
-        from: 'VM Expiry Management <noreply@yourdomain.com>',
+        from: this.getFromEmail(),
         to: [data.recipientEmail],
         subject,
         html: emailHtml,
@@ -544,7 +552,7 @@ Notification sent at: ${new Date().toLocaleString('en-US', {
     try {
       // Test with a simple email
       const result = await getResend().emails.send({
-        from: 'VM Expiry Management <noreply@yourdomain.com>',
+        from: this.getFromEmail(),
         to: ['test@example.com'],
         subject: 'Email Configuration Test',
         text: 'This is a test email to verify email configuration.',
